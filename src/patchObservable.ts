@@ -1,4 +1,4 @@
-import { Observable, PartialObserver, Subscriber } from 'rxjs';
+import { Observable, PartialObserver, Subscriber, Subscription, Observer } from 'rxjs';
 import { Refs, unwrapValue, valueIsWrapped } from './wrappedValue';
 
 export const Patched = Symbol('patched');
@@ -6,11 +6,10 @@ export const Patched = Symbol('patched');
 const observableStack: any[] = [];
 const valuesStack: any[] = []; // TODO document this is for mergeMap case
 const originalSubscribe = Observable.prototype.subscribe;
-const subscribeWithPatch: typeof originalSubscribe = function<T>(
+type ComposableSubscribe<T> = (this: Observable<T>, observer: Partial<Observer<T>>) => Subscription;
+const subscribeWithPatch = <T>(parent: ComposableSubscribe<T>): ComposableSubscribe<T> => function(
   this: Observable<T>,
-  observerOrNext?: PartialObserver<T> | ((value: T) => void) | null,
-  error?: ((error: any) => void) | null,
-  complete?: (() => void) | null
+  observer: Partial<Observer<T>>
 ) {
   if (this.operator) {
     const originalOperator = this.operator;
@@ -110,93 +109,72 @@ const subscribeWithPatch: typeof originalSubscribe = function<T>(
   if (childObservable && !childObservable[Refs]) {
     childObservable[Refs] = new Set();
   }
-  const result = (() => {
-    if (observerOrNext == null) {
-      return (originalSubscribe as any).call(
-        this,
-        observerOrNext,
-        error,
-        complete
-      );
-    }
-    if (typeof observerOrNext === 'function') {
-      return (originalSubscribe as any).call(
-        this,
-        (value: T) => {
-          if (childObservable && valueIsWrapped(value)) {
-            value[Refs].forEach(ref => childObservable[Refs].add(ref));
-          }
-          observerOrNext(value);
-        },
-        error,
-        complete
-      );
-    }
-    return (originalSubscribe as any).call(this, {
-      next:
-        observerOrNext.next &&
-        ((value: T) => {
-          if (childObservable && valueIsWrapped(value)) {
-            value[Refs].forEach(ref => childObservable[Refs].add(ref));
-          }
-          observerOrNext.next!(value);
-        }),
-      error: observerOrNext.error?.bind(observerOrNext),
-      complete: observerOrNext.complete?.bind(observerOrNext),
-    });
-  })();
+  const result = parent.call(this, {
+    next: observer.next && ((value: T) => {
+      if (childObservable && valueIsWrapped(value)) {
+        value[Refs].forEach(ref => childObservable[Refs].add(ref));
+      }
+      observer.next!(value);
+    }),
+    error: observer.error?.bind(observer),
+    complete: observer.complete?.bind(observer)
+  });
   observableStack.push(childObservable);
   return result;
 };
-const unwrappedSubscribe = function<T>(
+const unwrappedSubscribe = <T>(parent: ComposableSubscribe<T>): ComposableSubscribe<T> => function(
   this: Observable<T>,
-  observerOrNext?: PartialObserver<T> | ((value: T) => void) | null,
-  error?: ((error: any) => void) | null,
-  complete?: (() => void) | null
+  observer: Partial<Observer<T>>
 ) {
-  if (observerOrNext == null) {
-    return (subscribeWithPatch as any).call(
-      this,
-      observerOrNext,
-      error,
-      complete
-    );
-  }
-  if (typeof observerOrNext === 'function') {
-    return (subscribeWithPatch as any).call(
-      this,
-      (value: T) => {
-        const unwrappedValue = unwrapValue(value);
-        valuesStack.push({
-          value: unwrappedValue,
-          refs: valueIsWrapped(value) ? value[Refs] : null,
-        });
-        observerOrNext(unwrapValue(value));
-        valuesStack.pop();
-      },
-      error,
-      complete
-    );
-  }
-  return (subscribeWithPatch as any).call(this, {
-    next:
-      observerOrNext.next &&
-      ((value: T) => {
-        const unwrappedValue = unwrapValue(value);
-        valuesStack.push({
-          value: unwrappedValue,
-          refs: valueIsWrapped(value) ? value[Refs] : null,
-        });
-        observerOrNext.next!(unwrapValue(value));
-        valuesStack.pop();
-      }),
-    error: observerOrNext.error?.bind(observerOrNext),
-    complete: observerOrNext.complete?.bind(observerOrNext),
+  return parent.call(this, {
+    next: observer.next && ((value: T) => {
+      const unwrappedValue = unwrapValue(value);
+      valuesStack.push({
+        value: unwrappedValue,
+        refs: valueIsWrapped(value) ? value[Refs] : null,
+      });
+      observer.next!(unwrapValue(value));
+      valuesStack.pop();
+    }),
+    error: observer.error?.bind(observer),
+    complete: observer.complete?.bind(observer)
   });
 };
 
 export function patchObservable(ObservableCtor: typeof Observable) {
-  ObservableCtor.prototype.subscribe = unwrappedSubscribe;
+
+  ObservableCtor.prototype.subscribe = function<T>(
+    this: Observable<T>,
+    observerOrNext?: PartialObserver<T> | ((value: T) => void) | null,
+    error?: ((error: any) => void) | null,
+    complete?: (() => void) | null
+  ) {
+    const composedSubscribe = unwrappedSubscribe(subscribeWithPatch<T>(originalSubscribe as any))
+
+    return composedSubscribe.call(this, {
+      next: value => {
+        if (typeof observerOrNext === 'function') {
+          observerOrNext(value);
+        } else if (typeof observerOrNext === 'object' && observerOrNext != null) {
+          observerOrNext.next && observerOrNext.next(value);
+        }
+      },
+      error: err => {
+        if(observerOrNext && typeof observerOrNext === 'object' && observerOrNext.error) {
+          observerOrNext.error(err);
+        }else if(error) {
+          error(err);
+        }
+      },
+      complete: () => {
+        if(observerOrNext && typeof observerOrNext === 'object' && observerOrNext.complete) {
+          observerOrNext.complete();
+        }else if(complete) {
+          complete();
+        }
+      }
+    })
+  };
   (ObservableCtor as any).prototype[Patched] = true;
 }
 export function restoreObservable(ObservableCtor: typeof Observable) {
@@ -208,7 +186,7 @@ export const unpatchedMap = <T, R>(mapFn: (value: T) => R) => (
   source$: Observable<T>
 ): Observable<R> =>
   new Observable(obs =>
-    (subscribeWithPatch as any).call(source$, {
+    subscribeWithPatch<T>(originalSubscribe as any).call(source$, {
       next: (value: T) => obs.next(mapFn(value)),
       error: obs.error?.bind(obs),
       complete: obs.complete?.bind(obs),
