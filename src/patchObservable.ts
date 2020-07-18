@@ -16,6 +16,29 @@ type ComposableSubscribe<T> = (
   this: Observable<T>,
   observer: Partial<Observer<T>>
 ) => Subscription;
+const findChildRefsSubscribe = <T>(
+  parent: ComposableSubscribe<T>
+): ComposableSubscribe<T> =>
+  function(this: Observable<T>, observer: Partial<Observer<T>>) {
+    const childObservable = observableStack.pop();
+    if (childObservable && !childObservable[Refs]) {
+      childObservable[Refs] = new Set();
+    }
+    const result = parent.call(this, {
+      next:
+        observer.next &&
+        ((value: T) => {
+          if (childObservable && valueIsWrapped(value)) {
+            value[Refs].forEach(ref => childObservable[Refs].add(ref));
+          }
+          observer.next!(value);
+        }),
+      error: observer.error?.bind(observer),
+      complete: observer.complete?.bind(observer),
+    });
+    observableStack.push(childObservable);
+    return result;
+  };
 const subscribeWithPatch = <T>(
   parent: ComposableSubscribe<T>
 ): ComposableSubscribe<T> =>
@@ -118,25 +141,7 @@ const subscribeWithPatch = <T>(
       (this._subscribe as any)[Patched] = true;
     }
 
-    // Call the original `Observable.subscribe` by unwrapping the values
-    const childObservable = observableStack.pop();
-    if (childObservable && !childObservable[Refs]) {
-      childObservable[Refs] = new Set();
-    }
-    const result = parent.call(this, {
-      next:
-        observer.next &&
-        ((value: T) => {
-          if (childObservable && valueIsWrapped(value)) {
-            value[Refs].forEach(ref => childObservable[Refs].add(ref));
-          }
-          observer.next!(value);
-        }),
-      error: observer.error?.bind(observer),
-      complete: observer.complete?.bind(observer),
-    });
-    observableStack.push(childObservable);
-    return result;
+    return parent.call(this, observer);
   };
 const unwrappedSubscribe = <T>(
   parent: ComposableSubscribe<T>
@@ -167,7 +172,7 @@ export function patchObservable(ObservableCtor: typeof Observable) {
     complete?: (() => void) | null
   ) {
     const composedSubscribe = unwrappedSubscribe(
-      subscribeWithPatch<T>(originalSubscribe as any)
+      subscribeWithPatch(findChildRefsSubscribe<T>(originalSubscribe as any))
     );
 
     return composedSubscribe.call(this, {
@@ -213,6 +218,19 @@ export function restoreObservable(ObservableCtor: typeof Observable) {
 }
 
 export const unpatchedMap = <T, R>(mapFn: (value: T) => R) => (
+  source$: Observable<T>
+): Observable<R> =>
+  new Observable(obs =>
+    subscribeWithPatch(
+      findChildRefsSubscribe<T>(originalSubscribe as any)
+    ).call(source$, {
+      next: (value: T) => obs.next(mapFn(value)),
+      error: obs.error?.bind(obs),
+      complete: obs.complete?.bind(obs),
+    })
+  );
+
+export const mapWithoutChildRef = <T, R>(mapFn: (value: T) => R) => (
   source$: Observable<T>
 ): Observable<R> =>
   new Observable(obs =>

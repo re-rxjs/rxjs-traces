@@ -1,4 +1,4 @@
-import { unpatchedMap, Patched } from './patchObservable';
+import { mapWithoutChildRef, Patched } from './patchObservable';
 import { Observable, BehaviorSubject, merge } from 'rxjs';
 import { switchMap, map, scan } from 'rxjs/operators';
 import { Refs, valueIsWrapped } from './wrappedValue';
@@ -62,7 +62,7 @@ export const addDebugTag = (label: string, id = label) => <T>(
 
   let warningShown = false;
   return (source.pipe(
-    unpatchedMap(v => {
+    mapWithoutChildRef(v => {
       const { value, valueRefs } = valueIsWrapped(v)
         ? {
             value: v.value,

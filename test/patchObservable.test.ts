@@ -73,7 +73,7 @@ describe('patchObservable', () => {
   });
 
   describe('watches for relationships between tags', () => {
-    it.skip('references only up to the parent', async () => {
+    it('references only up to the parent', async () => {
       const stream = of(1).pipe(
         addDebugTag('source'),
         addDebugTag('middle'),
