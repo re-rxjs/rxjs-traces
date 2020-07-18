@@ -1,10 +1,10 @@
 import { Observable, PartialObserver, Subscriber } from 'rxjs';
-import { Refs, unwrapValue, valueIsWrapped } from './wrappedNext';
+import { Refs, unwrapValue, valueIsWrapped } from './wrappedValue';
 
 const Patched = Symbol('patched');
 
 const observableStack: any[] = [];
-const valuesStack: any[] = [];
+const valuesStack: any[] = []; // TODO document this is for mergeMap case
 const originalSubscribe = Observable.prototype.subscribe;
 const subscribeWithPatch: typeof originalSubscribe = function<T>(
   this: Observable<T>,
@@ -148,7 +148,7 @@ const subscribeWithPatch: typeof originalSubscribe = function<T>(
   observableStack.push(childObservable);
   return result;
 };
-Observable.prototype.subscribe = function<T>(
+const unwrappedSubscribe = function<T>(
   this: Observable<T>,
   observerOrNext?: PartialObserver<T> | ((value: T) => void) | null,
   error?: ((error: any) => void) | null,
@@ -195,6 +195,10 @@ Observable.prototype.subscribe = function<T>(
   });
 };
 
+export function patchObservable(ObservableCtor: typeof Observable) {
+  ObservableCtor.prototype.subscribe = unwrappedSubscribe;
+}
+
 export const unpatchedMap = <T, R>(mapFn: (value: T) => R) => (
   source$: Observable<T>
 ): Observable<R> =>
@@ -205,46 +209,3 @@ export const unpatchedMap = <T, R>(mapFn: (value: T) => R) => (
       complete: obs.complete?.bind(obs),
     })
   );
-
-interface DebugTag {
-  id: string;
-  label: string;
-  refs: Set<string>;
-  latestValue: any;
-}
-
-export const tags = new Map<string, DebugTag>();
-export const addDebugTag = (label: string, id = label) => <T>(
-  source: Observable<T>
-) => {
-  const debugTag: DebugTag = tags.has(id)
-    ? tags.get(id)!
-    : {
-        id,
-        label,
-        refs: new Set<string>(),
-        latestValue: undefined,
-      };
-  tags.set(debugTag.id, debugTag);
-
-  const childRefs = new Set<string>();
-  childRefs.add(debugTag.id);
-
-  return (source.pipe(
-    unpatchedMap(v => {
-      if (valueIsWrapped(v)) {
-        debugTag.latestValue = v.value;
-        v[Refs].forEach(ref => debugTag.refs.add(ref));
-        return {
-          value: v.value,
-          [Refs]: childRefs,
-        };
-      }
-      debugTag.latestValue = v;
-      return {
-        value: v,
-        [Refs]: childRefs,
-      };
-    })
-  ) as any) as Observable<T>;
-};

@@ -1,2 +1,2 @@
-export * from './debugObservable';
-export * from './wrappedNext';
+export * from './debugTag';
+export { patchObservable } from './patchObservable';

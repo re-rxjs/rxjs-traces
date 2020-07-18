@@ -1,14 +1,14 @@
 export const Refs = Symbol('rxjs-debug-refs');
 
-export interface WrappedNext<T = unknown> {
+export interface WrappedValue<T = unknown> {
   value: T;
   [Refs]: Set<string>;
 }
 
-export const valueIsWrapped = <T>(value: any): value is WrappedNext<T> =>
+export const valueIsWrapped = <T>(value: any): value is WrappedValue<T> =>
   Boolean(value[Refs]);
 
-export const unwrapValue = <T>(value: T | WrappedNext<T>) => {
+export const unwrapValue = <T>(value: T | WrappedValue<T>) => {
   if (valueIsWrapped(value)) {
     return value.value;
   }
