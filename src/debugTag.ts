@@ -1,44 +1,90 @@
 import { unpatchedMap } from 'patchObservable';
-import { Observable } from 'rxjs';
+import { Observable, BehaviorSubject, merge } from 'rxjs';
+import { switchMap, map, scan } from 'rxjs/operators';
 import { Refs, valueIsWrapped } from './wrappedValue';
 
-interface DebugTag {
+export interface DebugTag {
   id: string;
   label: string;
-  refs: Set<string>;
+  refs: string[];
   latestValue: any;
 }
 
-export const tags = new Map<string, DebugTag>();
+const tagStream = new BehaviorSubject<
+  Record<string, BehaviorSubject<DebugTag>>
+>({});
+
+export const tag$ = tagStream as Observable<
+  Record<string, Observable<DebugTag>>
+>;
+export const tagValue$ = tag$.pipe(
+  switchMap(tagsMap =>
+    merge(
+      ...Object.entries(tagsMap).map(([key, stream]) =>
+        stream.pipe(map(v => [key, v] as const))
+      )
+    ).pipe(
+      scan(
+        (previous, [key, value]) => ({
+          ...previous,
+          [key]: value,
+        }),
+        {} as Record<string, DebugTag>
+      )
+    )
+  )
+);
+
 export const addDebugTag = (label: string, id = label) => <T>(
   source: Observable<T>
 ) => {
-  const debugTag: DebugTag = tags.has(id)
-    ? tags.get(id)!
-    : {
-        id,
-        label,
-        refs: new Set<string>(),
-        latestValue: undefined,
-      };
-  tags.set(debugTag.id, debugTag);
+  const tagsMap = tagStream.getValue();
+  const tagSubject =
+    tagsMap[id] ??
+    new BehaviorSubject<DebugTag>({
+      id,
+      label,
+      refs: [],
+      latestValue: undefined,
+    });
+  if (!tagsMap[id]) {
+    tagStream.next({
+      ...tagsMap,
+      [id]: tagSubject,
+    });
+  }
 
   const childRefs = new Set<string>();
-  childRefs.add(debugTag.id);
+  childRefs.add(id);
 
   return (source.pipe(
     unpatchedMap(v => {
-      if (valueIsWrapped(v)) {
-        debugTag.latestValue = v.value;
-        v[Refs].forEach(ref => debugTag.refs.add(ref));
-        return {
-          value: v.value,
-          [Refs]: childRefs,
-        };
+      const { value, valueRefs } = valueIsWrapped(v)
+        ? {
+            value: v.value,
+            valueRefs: v[Refs],
+          }
+        : {
+            value: v,
+            valueRefs: undefined,
+          };
+
+      let refs = tagSubject.getValue().refs;
+      if (valueRefs) {
+        valueRefs.forEach(ref => {
+          if (!refs.includes(ref)) {
+            refs = [...refs, ref];
+          }
+        });
       }
-      debugTag.latestValue = v;
+      tagSubject.next({
+        ...tagSubject.getValue(),
+        refs,
+        latestValue: value,
+      });
+
       return {
-        value: v,
+        value,
         [Refs]: childRefs,
       };
     })
