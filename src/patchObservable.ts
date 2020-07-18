@@ -1,7 +1,7 @@
 import { Observable, PartialObserver, Subscriber } from 'rxjs';
 import { Refs, unwrapValue, valueIsWrapped } from './wrappedValue';
 
-const Patched = Symbol('patched');
+export const Patched = Symbol('patched');
 
 const observableStack: any[] = [];
 const valuesStack: any[] = []; // TODO document this is for mergeMap case
@@ -197,6 +197,11 @@ const unwrappedSubscribe = function<T>(
 
 export function patchObservable(ObservableCtor: typeof Observable) {
   ObservableCtor.prototype.subscribe = unwrappedSubscribe;
+  (ObservableCtor as any).prototype[Patched] = true;
+}
+export function restoreObservable(ObservableCtor: typeof Observable) {
+  ObservableCtor.prototype.subscribe = originalSubscribe;
+  (ObservableCtor as any).prototype[Patched] = false;
 }
 
 export const unpatchedMap = <T, R>(mapFn: (value: T) => R) => (

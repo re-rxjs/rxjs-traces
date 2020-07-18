@@ -1,4 +1,4 @@
-import { unpatchedMap } from 'patchObservable';
+import { unpatchedMap, Patched } from './patchObservable';
 import { Observable, BehaviorSubject, merge } from 'rxjs';
 import { switchMap, map, scan } from 'rxjs/operators';
 import { Refs, valueIsWrapped } from './wrappedValue';
@@ -35,6 +35,9 @@ export const tagValue$ = tag$.pipe(
   )
 );
 
+// Internal (just to reset tests);
+export const resetTag$ = () => tagStream.next({});
+
 export const addDebugTag = (label: string, id = label) => <T>(
   source: Observable<T>
 ) => {
@@ -57,6 +60,7 @@ export const addDebugTag = (label: string, id = label) => <T>(
   const childRefs = new Set<string>();
   childRefs.add(id);
 
+  let warningShown = false;
   return (source.pipe(
     unpatchedMap(v => {
       const { value, valueRefs } = valueIsWrapped(v)
@@ -83,6 +87,16 @@ export const addDebugTag = (label: string, id = label) => <T>(
         latestValue: value,
       });
 
+      if (!(source as any)[Patched]) {
+        if (!warningShown)
+          console.warn(
+            'rxjs-debugger: You are using `addDebugTag("' +
+              label +
+              '")` operator without calling `patchObservable` first'
+          );
+        warningShown = true;
+        return value;
+      }
       return {
         value,
         [Refs]: childRefs,
