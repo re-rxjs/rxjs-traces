@@ -48,7 +48,9 @@ const mergeReducer = <T>(
     distinctUntilChanged()
   );
 
-export const tagValue$ = mergeReducer<Record<string, DebugTag>>(
+export const tagValue$: Observable<Record<string, DebugTag>> = mergeReducer<
+  Record<string, DebugTag>
+>(
   {},
   (state, { index, value }): Record<string, DebugTag> => {
     switch (index) {
@@ -122,6 +124,10 @@ export const addDebugTag = (label: string, id = label) => <T>(
             valueRefs: undefined,
           };
 
+      tagValueChange$.next({
+        id,
+        value,
+      });
       if (valueRefs) {
         valueRefs.forEach(ref =>
           tagRefDetection$.next({
