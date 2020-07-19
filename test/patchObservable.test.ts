@@ -1,17 +1,21 @@
-import { patchObservable, addDebugTag, tagValue$ } from '../src';
-import { resetTag$ } from '../src/debugTag';
-import { restoreObservable } from '../src/patchObservable';
 import { Observable, of } from 'rxjs';
+import { marbles } from 'rxjs-marbles/jest';
 import {
-  map,
-  scan,
   concatMap,
   delay,
-  withLatestFrom,
-  takeLast,
+  map,
+  scan,
   switchMap,
+  takeLast,
+  withLatestFrom,
 } from 'rxjs/operators';
-import { marbles } from 'rxjs-marbles/jest';
+import { addDebugTag, patchObservable, tagValue$ } from '../src';
+import { resetTag$ } from '../src/debugTag';
+import { restoreObservable } from '../src/patchObservable';
+
+afterEach(() => {
+  resetTag$();
+});
 
 describe('patchObservable', () => {
   beforeAll(() => {
@@ -19,9 +23,6 @@ describe('patchObservable', () => {
   });
   afterAll(() => {
     restoreObservable(Observable);
-  });
-  afterEach(() => {
-    resetTag$();
   });
 
   describe('keeps the Observable API unchanged', () => {
@@ -130,7 +131,7 @@ describe('patchObservable', () => {
 
     it('detects references from async operators', async () => {
       const stream = of(1).pipe(
-        switchMap(v => of(v).pipe(delay(100), addDebugTag('source'))),
+        switchMap(v => of(v).pipe(delay(10), addDebugTag('source'))),
         addDebugTag('result')
       );
       const tags = await stream
@@ -144,38 +145,7 @@ describe('patchObservable', () => {
       expect(tags.result.refs).toEqual(['source']);
       expect(tags.source.refs).toEqual([]);
     });
+
+    it.skip('detects references from creation operators', () => void 0);
   });
-});
-
-describe('addDebugTag', () => {
-  beforeAll(() => {
-    patchObservable(Observable);
-  });
-  afterAll(() => {
-    restoreObservable(Observable);
-  });
-
-  // TODO
-  it.skip('keeps track of the latest value', () => void 0);
-
-  // Upcoming features (?)
-  it.skip('keeps track of the number of subscriptions', () => void 0);
-  it.skip('keeps the latest value for each subscription', () => void 0);
-});
-
-describe('without patching', () => {
-  it(
-    `doesn't polute the stream when using addDebugTag`,
-    marbles(m => {
-      const source = m.cold<string>('a-b-c-|');
-      const expected = '             0-1-2-|';
-
-      const stream = source.pipe(
-        addDebugTag('debug'),
-        map(char => String(char.charCodeAt(0) - 'a'.charCodeAt(0)))
-      );
-
-      m.expect(stream).toBeObservable(expected);
-    })
-  );
 });
