@@ -1,7 +1,30 @@
+import { merge, Observable, Subject } from 'rxjs';
+import {
+  distinctUntilChanged,
+  map,
+  scan,
+  startWith,
+  publish,
+} from 'rxjs/operators';
 import { mapWithoutChildRef, Patched } from './patchObservable';
-import { Observable, BehaviorSubject, merge } from 'rxjs';
-import { switchMap, map, scan } from 'rxjs/operators';
 import { Refs, valueIsWrapped } from './wrappedValue';
+
+export const newTag$ = new Subject<{
+  id: string;
+  label: string;
+}>();
+
+export const tagValueChange$ = new Subject<{
+  id: string;
+  value: any;
+}>();
+
+export const tagRefDetection$ = new Subject<{
+  id: string;
+  ref: string;
+}>();
+
+const tagReset$ = new Subject<void>();
 
 export interface DebugTag {
   id: string;
@@ -10,52 +33,78 @@ export interface DebugTag {
   latestValue: any;
 }
 
-const tagStream = new BehaviorSubject<
-  Record<string, BehaviorSubject<DebugTag>>
->({});
-
-export const tag$ = tagStream as Observable<
-  Record<string, Observable<DebugTag>>
->;
-export const tagValue$ = tag$.pipe(
-  switchMap(tagsMap =>
-    merge(
-      ...Object.entries(tagsMap).map(([key, stream]) =>
-        stream.pipe(map(v => [key, v] as const))
-      )
-    ).pipe(
-      scan(
-        (previous, [key, value]) => ({
-          ...previous,
-          [key]: value,
-        }),
-        {} as Record<string, DebugTag>
-      )
+const mergeReducer = <T>(
+  initialValue: T,
+  reducer: (state: T, action: { index: number; value: any }) => T,
+  ...observables: Observable<any>[]
+) =>
+  merge(
+    ...observables.map((obs, index) =>
+      obs.pipe(map(value => ({ index, value })))
     )
-  )
-);
+  ).pipe(
+    scan(reducer, initialValue),
+    startWith(initialValue),
+    distinctUntilChanged()
+  );
+
+export const tagValue$ = mergeReducer<Record<string, DebugTag>>(
+  {},
+  (state, { index, value }): Record<string, DebugTag> => {
+    switch (index) {
+      case 0: // reset
+        return {};
+      case 1: // newTag
+        if (state[value.id]) {
+          return state;
+        }
+        return {
+          ...state,
+          [value.id]: {
+            ...value,
+            refs: [],
+            latestValue: undefined,
+          },
+        };
+      case 2: // tagValueChanged
+        return {
+          ...state,
+          [value.id]: {
+            ...state[value.id],
+            latestValue: value.value,
+          },
+        };
+      case 3: // tagRefDetection
+        if (state[value.id].refs.includes(value.ref)) {
+          return state;
+        }
+        return {
+          ...state,
+          [value.id]: {
+            ...state[value.id],
+            refs: [...state[value.id].refs, value.ref],
+          },
+        };
+    }
+    return state;
+  },
+  tagReset$,
+  newTag$,
+  tagValueChange$,
+  tagRefDetection$
+).pipe(publish());
+(tagValue$ as any).connect();
 
 // Internal (just to reset tests);
-export const resetTag$ = () => tagStream.next({});
+export const resetTag$ = () => tagReset$.next();
 
 export const addDebugTag = (label: string, id = label) => <T>(
   source: Observable<T>
 ) => {
-  const tagsMap = tagStream.getValue();
-  const tagSubject =
-    tagsMap[id] ??
-    new BehaviorSubject<DebugTag>({
-      id,
-      label,
-      refs: [],
-      latestValue: undefined,
-    });
-  if (!tagsMap[id]) {
-    tagStream.next({
-      ...tagsMap,
-      [id]: tagSubject,
-    });
-  }
+  newTag$.next({
+    id,
+    label,
+  });
 
   const childRefs = new Set<string>();
   childRefs.add(id);
@@ -73,19 +122,14 @@ export const addDebugTag = (label: string, id = label) => <T>(
             valueRefs: undefined,
           };
 
-      let refs = tagSubject.getValue().refs;
       if (valueRefs) {
-        valueRefs.forEach(ref => {
-          if (!refs.includes(ref)) {
-            refs = [...refs, ref];
-          }
-        });
+        valueRefs.forEach(ref =>
+          tagRefDetection$.next({
+            id,
+            ref,
+          })
+        );
       }
-      tagSubject.next({
-        ...tagSubject.getValue(),
-        refs,
-        latestValue: value,
-      });
 
       if (!(source as any)[Patched]) {
         if (!warningShown)

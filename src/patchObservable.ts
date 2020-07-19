@@ -110,38 +110,47 @@ const subscribeWithPatch = <T>(
    * - Propagate refs from the `source.subscribe()` to the observer `obs`.
    */
 
+    let overridenThis = this;
     if (
       this._subscribe !== Observable.prototype._subscribe &&
       !(this._subscribe as any)[Patched]
     ) {
       const originalSubscribeFn = this._subscribe;
-      this._subscribe = (subscriber: Subscriber<T>) => {
-        const originalNext = subscriber.next;
-        subscriber.next = (value: T) => {
-          const wrapped = valueIsWrapped(value)
-            ? value
-            : {
-                value,
-                [Refs]: new Set(),
-              };
+      // When using multicast => ConnectableObservables, rxjs uses Object.create
+      // that sets '_subscribe' to not writteable, so we can't patch it that way.
+      // It seems like creating a copy of the object like this solves it.
+      overridenThis = Object.create(this, {
+        _subscribe: {
+          value: (subscriber: Subscriber<T>) => {
+            const originalNext = subscriber.next;
+            subscriber.next = (value: T) => {
+              const wrapped = valueIsWrapped(value)
+                ? value
+                : {
+                    value,
+                    [Refs]: new Set(),
+                  };
 
-          if ((this as any)[Refs]) {
-            (this as any)[Refs].forEach((ref: string) =>
-              wrapped[Refs].add(ref)
-            );
-          }
-          originalNext.call(subscriber, wrapped as T);
-        };
+              if ((this as any)[Refs]) {
+                (this as any)[Refs].forEach((ref: string) =>
+                  wrapped[Refs].add(ref)
+                );
+              }
+              originalNext.call(subscriber, wrapped as T);
+            };
 
-        observableStack.push(this);
-        const result = originalSubscribeFn.call(this, subscriber);
-        observableStack.pop();
-        return result;
-      };
+            observableStack.push(this);
+            const result = originalSubscribeFn.call(this, subscriber);
+            observableStack.pop();
+            return result;
+          },
+        },
+      });
       (this._subscribe as any)[Patched] = true;
+      (overridenThis._subscribe as any)[Patched] = true;
     }
 
-    return parent.call(this, observer);
+    return parent.call(overridenThis, observer);
   };
 const unwrappedSubscribe = <T>(
   parent: ComposableSubscribe<T>

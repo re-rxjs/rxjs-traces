@@ -6,7 +6,7 @@ export interface WrappedValue<T = unknown> {
 }
 
 export const valueIsWrapped = <T>(value: any): value is WrappedValue<T> =>
-  Boolean(value[Refs]);
+  Boolean(value && value[Refs]);
 
 export const unwrapValue = <T>(value: T | WrappedValue<T>) => {
   if (valueIsWrapped(value)) {

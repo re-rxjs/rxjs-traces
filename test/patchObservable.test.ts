@@ -4,6 +4,7 @@ import {
   concatMap,
   delay,
   map,
+  publish,
   scan,
   switchMap,
   takeLast,
@@ -68,6 +69,20 @@ describe('patchObservable', () => {
           map(char => String(char.charCodeAt(0) - 'a'.charCodeAt(0)))
         );
 
+        m.expect(stream).toBeObservable(expected);
+      })
+    );
+
+    it(
+      `doesn't break when using connectable observables`,
+      marbles(m => {
+        const source = m.cold<string>('-a-b-c-|');
+        const expected = '             -a-b-c-|)';
+
+        const stream = source.pipe(publish());
+        (stream as any).connect();
+
+        m.expect(stream).toBeObservable(expected);
         m.expect(stream).toBeObservable(expected);
       })
     );
