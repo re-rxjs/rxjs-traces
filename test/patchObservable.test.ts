@@ -168,7 +168,7 @@ describe('patchObservable', () => {
      *     original emission, because it actually emits [value1, value2].
      * Workaround: wrap `withLatestFrom` with `patchOperator`
      */
-    it.skip('detects references from argument streams', async () => {
+    it('detects references from argument streams', async () => {
       const createSource = (id: number) =>
         of(id).pipe(delay(10), addDebugTag('source' + id));
 

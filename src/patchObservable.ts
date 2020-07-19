@@ -48,7 +48,20 @@ const subscribeWithPatch = <T>(
       this.operator = {
         call: (subscriber, source: Observable<any>) => {
           const refs = new Set<string>();
-          return originalOperator.call(
+          /**
+           * We want to detect what observables does it subscribe to from parameters
+           * think of withLatestFrom/combineLatest.
+           * What we'll do is create a fake source which won't subscribe straight
+           * away, so those subscribes that happen synchronously will be legit.
+           */
+          let innerOperatorSubscriber: any = null;
+          const fakeSource = {
+            subscribe: (subscriber: any) => {
+              innerOperatorSubscriber = subscriber;
+            },
+          } as Observable<any>;
+          observableStack.push(this);
+          originalOperator.call(
             new Subscriber({
               next: value => {
                 const lastValue = valuesStack.pop();
@@ -57,6 +70,10 @@ const subscribeWithPatch = <T>(
                   Object.is(lastValue.value, unwrapValue(value))
                 ) {
                   lastValue.refs.forEach((ref: string) => refs.add(ref));
+                }
+
+                if ((this as any)[Refs]) {
+                  (this as any)[Refs].forEach((ref: string) => refs.add(ref));
                 }
                 if (valueIsWrapped(value)) {
                   value[Refs].forEach(ref => refs.add(ref));
@@ -77,7 +94,11 @@ const subscribeWithPatch = <T>(
               error: subscriber.error.bind(subscriber),
               complete: subscriber.complete.bind(subscriber),
             }),
-            source.pipe(
+            fakeSource
+          );
+          observableStack.pop();
+          return source
+            .pipe(
               unpatchedMap(value => {
                 if (valueIsWrapped(value)) {
                   value[Refs].forEach(ref => refs.add(ref));
@@ -86,7 +107,7 @@ const subscribeWithPatch = <T>(
                 return value;
               })
             )
-          );
+            .subscribe(innerOperatorSubscriber);
         },
       };
       (this.operator as any)[Patched] = true;
