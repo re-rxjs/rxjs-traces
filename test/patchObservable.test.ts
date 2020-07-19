@@ -1,4 +1,4 @@
-import { Observable, of } from 'rxjs';
+import { concat, Observable, of } from 'rxjs';
 import { marbles } from 'rxjs-marbles/jest';
 import {
   concatMap,
@@ -161,6 +161,54 @@ describe('patchObservable', () => {
       expect(tags.source.refs).toEqual([]);
     });
 
-    it.skip('detects references from creation operators', () => void 0);
+    /** It doesn't :/. Two issues:
+     * 1. Values emitted from within `withLatestFrom` are not emitted
+     *     synchronously (because semantics)
+     * 2. The result of `withLatestFrom` doesn't pass `Object.is` from the
+     *     original emission, because it actually emits [value1, value2].
+     * Workaround: wrap `withLatestFrom` with `patchOperator`
+     */
+    it.skip('detects references from argument streams', async () => {
+      const createSource = (id: number) =>
+        of(id).pipe(delay(10), addDebugTag('source' + id));
+
+      const stream = createSource(1).pipe(
+        withLatestFrom(createSource(2)),
+        addDebugTag('result')
+      );
+
+      const tags = await stream
+        .pipe(
+          takeLast(1),
+          withLatestFrom(tagValue$),
+          map(([_, tags]) => tags)
+        )
+        .toPromise();
+
+      expect(tags.result.refs).toEqual(['source1', 'source2']);
+      expect(tags.source1.refs).toEqual([]);
+      expect(tags.source2.refs).toEqual([]);
+    });
+
+    it('detects references from creation operators', async () => {
+      const createSource = (id: number) =>
+        of(id).pipe(delay(10), addDebugTag('source' + id));
+
+      const stream = concat(createSource(1), createSource(2)).pipe(
+        addDebugTag('result')
+      );
+
+      const tags = await stream
+        .pipe(
+          takeLast(1),
+          withLatestFrom(tagValue$),
+          map(([_, tags]) => tags)
+        )
+        .toPromise();
+
+      expect(tags.result.refs).toEqual(['source1', 'source2']);
+      expect(tags.source1.refs).toEqual([]);
+      expect(tags.source2.refs).toEqual([]);
+    });
   });
 });

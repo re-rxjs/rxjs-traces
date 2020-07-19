@@ -43,7 +43,7 @@ const subscribeWithPatch = <T>(
   parent: ComposableSubscribe<T>
 ): ComposableSubscribe<T> =>
   function(this: Observable<T>, observer: Partial<Observer<T>>) {
-    if (this.operator) {
+    if (this.operator && !(this.operator as any)[Patched]) {
       const originalOperator = this.operator;
       this.operator = {
         call: (subscriber, source: Observable<any>) => {
@@ -89,6 +89,7 @@ const subscribeWithPatch = <T>(
           );
         },
       };
+      (this.operator as any)[Patched] = true;
     }
 
     /** Imagine this case, the most simple one:
@@ -163,7 +164,7 @@ const unwrappedSubscribe = <T>(
           const unwrappedValue = unwrapValue(value);
           valuesStack.push({
             value: unwrappedValue,
-            refs: valueIsWrapped(value) ? value[Refs] : null,
+            refs: valueIsWrapped(value) ? value[Refs] : new Set(),
           });
           observer.next!(unwrapValue(value));
           valuesStack.pop();
