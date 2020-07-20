@@ -122,7 +122,7 @@ export const addDebugTag = (label: string, id = label) => <T>(
   childRefs.add(id);
 
   let warningShown = false;
-  return (source.pipe(
+  const result = source.pipe(
     mapWithoutChildRef(v => {
       const { value, valueRefs } = valueIsWrapped(v)
         ? {
@@ -162,5 +162,7 @@ export const addDebugTag = (label: string, id = label) => <T>(
         [Refs]: childRefs,
       };
     })
-  ) as any) as Observable<T>;
+  ) as any;
+  result.isDebugTag = true;
+  return result as Observable<T>;
 };

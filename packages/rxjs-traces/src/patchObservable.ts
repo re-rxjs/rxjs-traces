@@ -36,7 +36,9 @@ const findChildRefsSubscribe = <T>(
       error: observer.error?.bind(observer),
       complete: observer.complete?.bind(observer),
     });
-    observableStack.push(childObservable);
+    if (childObservable) {
+      observableStack.push(childObservable);
+    }
     return result;
   };
 const subscribeWithPatch = <T>(
@@ -141,22 +143,24 @@ const subscribeWithPatch = <T>(
       overridenThis = Object.create(this, {
         _subscribe: {
           value: (subscriber: Subscriber<T>) => {
-            const originalNext = subscriber.next;
-            subscriber.next = (value: T) => {
-              const wrapped = valueIsWrapped(value)
-                ? value
-                : {
-                    value,
-                    [Refs]: new Set(),
-                  };
+            if (!(this as any).isDebugTag) {
+              const originalNext = subscriber.next;
+              subscriber.next = (value: T) => {
+                const wrapped = valueIsWrapped(value)
+                  ? value
+                  : {
+                      value,
+                      [Refs]: new Set(),
+                    };
 
-              if ((this as any)[Refs]) {
-                (this as any)[Refs].forEach((ref: string) =>
-                  wrapped[Refs].add(ref)
-                );
-              }
-              originalNext.call(subscriber, wrapped as T);
-            };
+                if ((this as any)[Refs]) {
+                  (this as any)[Refs].forEach((ref: string) =>
+                    wrapped[Refs].add(ref)
+                  );
+                }
+                originalNext.call(subscriber, wrapped as T);
+              };
+            }
 
             observableStack.push(this);
             const result = originalSubscribeFn.call(this, subscriber);

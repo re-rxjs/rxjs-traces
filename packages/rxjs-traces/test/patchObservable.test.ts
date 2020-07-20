@@ -110,6 +110,29 @@ describe('patchObservable', () => {
       expect(tags.source.refs).toEqual([]);
     });
 
+    it('references only the parent with custom operator followed by standard operator', async () => {
+      // Honestly... no idea of what's happening
+      const stream = of(1).pipe(
+        addDebugTag('source'),
+        source => new Observable(obs => source.subscribe(obs)),
+        map(v => 0),
+        addDebugTag('middle'),
+        addDebugTag('result')
+      );
+
+      const tags = (await stream
+        .pipe(
+          takeLast(1),
+          withLatestFrom(tagValue$),
+          map(([_, tags]) => tags)
+        )
+        .toPromise()) as any;
+
+      expect(tags.result.refs).toEqual(['middle']);
+      expect(tags.middle.refs).toEqual(['source']);
+      expect(tags.source.refs).toEqual([]);
+    });
+
     it('detects references across standard operators', async () => {
       const stream = of(1).pipe(
         addDebugTag('source'),
