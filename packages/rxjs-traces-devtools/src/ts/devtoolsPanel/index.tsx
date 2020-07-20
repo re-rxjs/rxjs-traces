@@ -8,7 +8,7 @@ import { Visualization } from './Visualization';
 
 const tagValue$ = new Observable<Record<string, DebugTag>>((obs) => {
   var backgroundPageConnection = chrome.runtime.connect({
-    name: "devtools-page",
+    name: "devtools-page_" + chrome.devtools.inspectedWindow.tabId,
   });
 
   backgroundPageConnection.onMessage.addListener(function (message) {

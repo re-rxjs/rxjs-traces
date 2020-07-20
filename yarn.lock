@@ -969,6 +969,11 @@
     "@types/istanbul-reports" "^1.1.1"
     "@types/yargs" "^13.0.0"
 
+"@react-rxjs/core@^0.1.0-alpha.0":
+  version "0.1.0-alpha.0"
+  resolved "https://registry.yarnpkg.com/@react-rxjs/core/-/core-0.1.0-alpha.0.tgz#e2ad14f60c1450337f17e033a85b9af09c564b09"
+  integrity sha512-p8/J9NUYMxVbIxO3yRoslKgF5UWIgklfAZ69cXQtMM2yafnhB9J7zHfHM1HOO9L366cZaCAK/DDfulIl5/CKww==
+
 "@rollup/plugin-commonjs@^11.0.0":
   version "11.1.0"
   resolved "https://registry.yarnpkg.com/@rollup/plugin-commonjs/-/plugin-commonjs-11.1.0.tgz#60636c7a722f54b41e419e1709df05c7234557ef"

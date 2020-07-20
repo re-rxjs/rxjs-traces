@@ -1,4 +1,4 @@
-import { concat, Observable, of } from 'rxjs';
+import { concat, Observable, of, interval, merge } from 'rxjs';
 import { marbles } from 'rxjs-marbles/jest';
 import {
   concatMap,
@@ -9,10 +9,12 @@ import {
   switchMap,
   takeLast,
   withLatestFrom,
+  take,
 } from 'rxjs/operators';
 import { addDebugTag, patchObservable, tagValue$ } from '../src';
 import { resetTag$ } from '../src/debugTag';
 import { restoreObservable } from '../src/patchObservable';
+import { shareLatest } from '@react-rxjs/core';
 
 afterEach(() => {
   resetTag$();
@@ -161,13 +163,6 @@ describe('patchObservable', () => {
       expect(tags.source.refs).toEqual([]);
     });
 
-    /** It doesn't :/. Two issues:
-     * 1. Values emitted from within `withLatestFrom` are not emitted
-     *     synchronously (because semantics)
-     * 2. The result of `withLatestFrom` doesn't pass `Object.is` from the
-     *     original emission, because it actually emits [value1, value2].
-     * Workaround: wrap `withLatestFrom` with `patchOperator`
-     */
     it('detects references from argument streams', async () => {
       const createSource = (id: number) =>
         of(id).pipe(delay(10), addDebugTag('source' + id));
@@ -209,6 +204,29 @@ describe('patchObservable', () => {
       expect(tags.result.refs).toEqual(['source1', 'source2']);
       expect(tags.source1.refs).toEqual([]);
       expect(tags.source2.refs).toEqual([]);
+    });
+
+    it('works across custom shared operators', async () => {
+      const source = interval(10).pipe(
+        take(5),
+        addDebugTag('source'),
+        shareLatest()
+      );
+
+      const stream1 = source.pipe(addDebugTag('result1'));
+      const stream2 = source.pipe(addDebugTag('result2'));
+
+      const tags = await merge(stream1, stream2)
+        .pipe(
+          takeLast(1),
+          withLatestFrom(tagValue$),
+          map(([_, tags]) => tags)
+        )
+        .toPromise();
+
+      expect(tags.result1.refs).toEqual(['source']);
+      expect(tags.result2.refs).toEqual(['source']);
+      expect(tags.source.refs).toEqual([]);
     });
   });
 });

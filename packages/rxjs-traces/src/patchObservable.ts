@@ -133,10 +133,7 @@ const subscribeWithPatch = <T>(
    */
 
     let overridenThis = this;
-    if (
-      this._subscribe !== Observable.prototype._subscribe &&
-      !(this._subscribe as any)[Patched]
-    ) {
+    if (this._subscribe !== Observable.prototype._subscribe) {
       const originalSubscribeFn = this._subscribe;
       // When using multicast => ConnectableObservables, rxjs uses Object.create
       // that sets '_subscribe' to not writteable, so we can't patch it that way.
@@ -168,8 +165,6 @@ const subscribeWithPatch = <T>(
           },
         },
       });
-      (this._subscribe as any)[Patched] = true;
-      (overridenThis._subscribe as any)[Patched] = true;
     }
 
     return parent.call(overridenThis, observer);
