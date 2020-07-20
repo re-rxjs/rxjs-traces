@@ -97,6 +97,16 @@ export const tagValue$: Observable<Record<string, DebugTag>> = mergeReducer<
 ).pipe(publish());
 (tagValue$ as any).connect();
 
+tagValue$.subscribe(payload => {
+  window.postMessage(
+    {
+      source: 'rxjs-traces-bridge',
+      payload,
+    },
+    window.location.origin
+  );
+});
+
 // Internal (just to reset tests);
 export const resetTag$ = () => tagReset$.next();
 

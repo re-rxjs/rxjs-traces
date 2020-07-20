@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -31,9 +31,9 @@
     "singleQuote": true,
     "trailingComma": "es5"
   },
-  "name": "rxjs-debugger",
+  "name": "rxjs-traces",
   "author": "Víctor Oliva",
-  "module": "dist/rxjs-debugger.esm.js",
+  "module": "dist/rxjs-traces.esm.js",
   "devDependencies": {
     "husky": "^4.2.5",
     "rxjs": "^6.6.0",
