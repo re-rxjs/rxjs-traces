@@ -1,6 +1,6 @@
 
 chrome.devtools.panels.create(
-  "My Panel",
+  "Rxjs Traces",
   "MyPanelIcon.png",
   "devtoolsPanel.html"
 );

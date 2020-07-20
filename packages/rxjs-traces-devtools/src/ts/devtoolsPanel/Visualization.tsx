@@ -62,10 +62,10 @@ export const Visualization: FC<{
       const refs = Array.from(tag.refs);
       refs.forEach((ref) => {
         const edge: Edge = {
-          id: tag.id + "<-" + ref,
+          id: tag.id + "->" + ref,
           from: tag.id,
           to: ref,
-          arrows: "to",
+          arrows: "from",
         };
         if (!edgeIds.includes(edge.id)) {
           newEdges.push(edge);

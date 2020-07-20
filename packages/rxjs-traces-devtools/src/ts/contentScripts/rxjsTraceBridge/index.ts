@@ -1,5 +1,5 @@
 
-window.addEventListener("message", event => {
+const handleMessage = (event: MessageEvent) => {
 	const { data, origin } = event;
 
 	if(origin !== window.location.origin) {
@@ -9,4 +9,10 @@ window.addEventListener("message", event => {
 	if(data && typeof data === 'object' && data.source === 'rxjs-traces-bridge') {
 		chrome.runtime.sendMessage(data.payload);
 	}
-}, false);
+}
+
+window.addEventListener("message", handleMessage, false);
+
+chrome.runtime.connect().onDisconnect.addListener(function() {
+	window.removeEventListener("message", handleMessage);
+});

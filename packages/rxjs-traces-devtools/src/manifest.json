@@ -1,8 +1,8 @@
 {
-	"name": "Web Extension Starter",
+	"name": "Rxjs Traces",
 	"author": "ymdevs",
 	"version": "1.0.0",
-	"description": "A web browser extension starter - based on Typescript, React, Redux, Styled-Component, Webpack, and more. Runs on Chrome and Firefox.",
+	"description": "Devtools for rxjs-traces",
 	"icons": {
 		"128": "assets/icon-128.png"
 	},
