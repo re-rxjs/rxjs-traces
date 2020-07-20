@@ -1,45 +1,15 @@
 {
-  "version": "0.1.0-alpha.1",
+  "private": true,
   "license": "MIT",
-  "main": "dist/index.js",
-  "typings": "dist/index.d.ts",
-  "files": [
-    "dist",
-    "src"
+  "workspaces": [
+    "packages/*"
   ],
-  "engines": {
-    "node": ">=10"
-  },
-  "scripts": {
-    "start": "tsdx watch",
-    "build": "tsdx build",
-    "test": "tsdx test",
-    "lint": "tsdx lint src test",
-    "prepare": "tsdx build"
-  },
-  "peerDependencies": {
-    "rxjs": "^6.6.0"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "tsdx lint"
-    }
-  },
   "prettier": {
     "printWidth": 80,
-    "semi": true,
-    "singleQuote": true,
-    "trailingComma": "es5"
+    "semi": false,
+    "trailingComma": "all"
   },
-  "name": "rxjs-traces",
-  "author": "Víctor Oliva",
-  "module": "dist/rxjs-traces.esm.js",
   "devDependencies": {
-    "husky": "^4.2.5",
-    "rxjs": "^6.6.0",
-    "rxjs-marbles": "^6.0.1",
-    "tsdx": "^0.13.2",
-    "tslib": "^2.0.0",
-    "typescript": "^3.9.7"
+    "prettier": "^2.0.5"
   }
 }
