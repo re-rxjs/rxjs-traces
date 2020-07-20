@@ -45,7 +45,7 @@ export const Visualization: FC<{
     allTags.forEach((tag) => {
       const node: Node = {
         id: tag.id,
-        label: `${tag.label} (${tag.latestValue})`,
+        label: `${tag.label} (${formatValue(tag.latestValue)})`,
       };
       if (currentNodeIds.includes(tag.id)) {
         nodeUpdates.push(node);
@@ -79,3 +79,14 @@ export const Visualization: FC<{
     Container
   </div>;
 };
+
+const formatValue = (value: any) => {
+  const valueStr = JSON.stringify(value);
+  if(!valueStr) {
+    return valueStr;
+  }
+  if(valueStr.length > 13) {
+    return valueStr.slice(0, 10) + '...'
+  }
+  return valueStr;
+}

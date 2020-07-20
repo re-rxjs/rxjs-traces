@@ -101,7 +101,7 @@ tagValue$.subscribe(payload => {
   window.postMessage(
     {
       source: 'rxjs-traces-bridge',
-      payload,
+      payload: JSON.stringify(payload),
     },
     window.location.origin
   );

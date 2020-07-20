@@ -7,7 +7,7 @@ const handleMessage = (event: MessageEvent) => {
 	}
 
 	if(data && typeof data === 'object' && data.source === 'rxjs-traces-bridge') {
-		chrome.runtime.sendMessage(data.payload);
+		chrome.runtime.sendMessage(JSON.parse(data.payload));
 	}
 }
 
