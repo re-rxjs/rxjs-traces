@@ -1,4 +1,4 @@
-import { Observable, of, from } from 'rxjs';
+import { Observable, of, from, merge } from 'rxjs';
 import { marbles } from 'rxjs-marbles/jest';
 import {
   map,
@@ -6,10 +6,13 @@ import {
   withLatestFrom,
   concatMap,
   delay,
+  mergeMap,
+  ignoreElements,
 } from 'rxjs/operators';
 import { addDebugTag, patchObservable } from '../src';
 import { resetTag$, tagValue$ } from '../src/debugTag';
 import { restoreObservable } from '../src/patchObservable';
+import { eachValueFrom } from 'rxjs-for-await';
 
 afterEach(() => {
   resetTag$();
@@ -34,7 +37,9 @@ describe('addDebugTag', () => {
       )
       .toPromise();
 
-    expect(tags.result.latestValue).toEqual(1);
+    const values = Object.values(tags.result.latestValues);
+    expect(values.length).toEqual(1);
+    expect(values[0]).toEqual(1);
   });
 
   it('keeps track of the latest value', async () => {
@@ -43,15 +48,60 @@ describe('addDebugTag', () => {
       addDebugTag('result')
     );
 
-    expect.assertions(3);
+    expect.assertions(3 * 2);
     await stream.pipe(withLatestFrom(tagValue$)).forEach(([value, tags]) => {
-      expect(tags.result.latestValue).toBe(value);
+      const values = Object.values(tags.result.latestValues);
+      expect(values.length).toEqual(1);
+      expect(values[0]).toBe(value);
     });
   });
 
-  // Upcoming features (?)
-  it.skip('keeps track of the number of subscriptions', () => void 0);
-  it.skip('keeps the latest value for each subscription', () => void 0);
+  it('keeps the latest value for each subscription', async () => {
+    const stream = from([1, 2]).pipe(
+      concatMap(v => of(v).pipe(delay(10))),
+      addDebugTag('result')
+    );
+
+    const subscriptionStream = from([1, 2]).pipe(
+      concatMap(v => of(v).pipe(delay(5))),
+      mergeMap(() => stream),
+      ignoreElements()
+    );
+
+    const valueIterator = eachValueFrom(
+      merge(tagValue$, subscriptionStream).pipe(
+        map(tags => tags.result.latestValues)
+      )
+    );
+
+    let value: Record<string, any>;
+
+    value = (await valueIterator.next()).value;
+    expect(Object.keys(value).length).toBe(1);
+
+    value = (await valueIterator.next()).value;
+    expect(Object.keys(value).length).toBe(2);
+    const [id1, id2] = Object.keys(value);
+    expect(value[id1]).toBeUndefined();
+    expect(value[id2]).toBeUndefined();
+
+    value = (await valueIterator.next()).value;
+    expect(value[id1]).toEqual(1);
+    expect(value[id2]).toBeUndefined();
+
+    value = (await valueIterator.next()).value;
+    expect(value[id1]).toEqual(1);
+    expect(value[id2]).toEqual(1);
+
+    value = (await valueIterator.next()).value;
+    expect(value[id1]).toEqual(2);
+    expect(value[id2]).toEqual(1);
+
+    value = (await valueIterator.next()).value;
+    expect(Object.keys(value).length).toBe(1);
+    expect(value[id1]).toBeUndefined();
+    expect(value[id2]).toEqual(1);
+  });
 });
 
 describe('without patching', () => {

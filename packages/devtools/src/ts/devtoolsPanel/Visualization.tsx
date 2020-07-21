@@ -42,22 +42,35 @@ export const Visualization: FC<{
     const allTags = Object.values(tags);
     const nodeUpdates: Node[] = [];
     const newNodes: Node[] = [];
-    allTags.forEach((tag) => {
-      const node: Node = {
-        id: tag.id,
-        label: `${tag.label} (${formatValue(tag.latestValue)})`,
-      };
-      if (currentNodeIds.includes(tag.id)) {
-        nodeUpdates.push(node);
-      } else {
-        newNodes.push(node);
+    const nodesToRemove: string[] = [];
+    allTags
+      .forEach((tag) => {
+        if(Object.keys(tag.latestValues).length < 0) {
+          nodesToRemove.push(tag.id);
+          return;
+        }
+        const node: Node = {
+          id: tag.id,
+          label: `${tag.label} (${formatValue(tag.latestValues)})`,
+        };
+        if (currentNodeIds.includes(tag.id)) {
+          nodeUpdates.push(node);
+        } else {
+          newNodes.push(node);
+        }
+      });
+    nodes.current.forEach(({ id }) => {
+      if(!allTags.some(tag => tag.id === id)) {
+        nodesToRemove.push(id);
       }
-    });
+    })
     if (nodeUpdates.length) nodes.current.update(nodeUpdates);
     if (newNodes.length) nodes.current.add(newNodes);
+    if (nodesToRemove.length) nodes.current.remove(nodesToRemove);
 
     const edgeIds = edges.current.getIds();
     const newEdges: Edge[] = [];
+    const edgesToRemove = new Set<string>();
     allTags.forEach((tag) => {
       const refs = Array.from(tag.refs);
       refs.forEach((ref) => {
@@ -72,7 +85,15 @@ export const Visualization: FC<{
         }
       });
     });
+    nodesToRemove.forEach(id => {
+      edges.current.forEach(edge => {
+        if(edge.from === id || edge.to === id) {
+          edgesToRemove.add(id);
+        }
+      })
+    })
     if (newEdges.length) edges.current.add(newEdges);
+    if (edgesToRemove.size) edges.current.remove(Array.from(edgesToRemove));
   });
 
   return <div ref={container}>
@@ -80,13 +101,13 @@ export const Visualization: FC<{
   </div>;
 };
 
-const formatValue = (value: any) => {
-  const valueStr = JSON.stringify(value);
+const formatValue = (value: Record<string, any>) => {
+  const valueStr = JSON.stringify(Object.values(value));
   if(!valueStr) {
     return valueStr;
   }
-  if(valueStr.length > 13) {
-    return valueStr.slice(0, 10) + '...'
+  if(valueStr.length > 18) {
+    return valueStr.slice(0, 15) + '...'
   }
   return valueStr;
 }

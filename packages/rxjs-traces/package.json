@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0-alpha.4",
+  "version": "0.1.0-alpha.5",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -36,11 +36,16 @@
   "module": "dist/rxjs-traces.esm.js",
   "devDependencies": {
     "@react-rxjs/core": "^0.1.0-alpha.0",
+    "@types/uuid": "^8.0.0",
     "husky": "^4.2.5",
     "rxjs": "^6.6.0",
+    "rxjs-for-await": "^0.0.2",
     "rxjs-marbles": "^6.0.1",
     "tsdx": "^0.13.2",
     "tslib": "^2.0.0",
     "typescript": "^3.9.7"
+  },
+  "dependencies": {
+    "uuid": "^8.2.0"
   }
 }

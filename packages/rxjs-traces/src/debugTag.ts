@@ -5,17 +5,31 @@ import {
   scan,
   startWith,
   publish,
+  finalize,
+  tap,
 } from 'rxjs/operators';
 import { mapWithoutChildRef, Patched } from './patchObservable';
 import { Refs, valueIsWrapped } from './wrappedValue';
+import { v4 as uuid } from 'uuid';
 
 export const newTag$ = new Subject<{
   id: string;
   label: string;
 }>();
 
+export const tagSubscription$ = new Subject<{
+  id: string;
+  sid: string;
+}>();
+
+export const tagUnsubscription$ = new Subject<{
+  id: string;
+  sid: string;
+}>();
+
 export const tagValueChange$ = new Subject<{
   id: string;
+  sid: string;
   value: any;
 }>();
 
@@ -30,7 +44,7 @@ export interface DebugTag {
   id: string;
   label: string;
   refs: string[];
-  latestValue: any;
+  latestValues: Record<string, any>;
 }
 
 const mergeReducer = <T>(
@@ -65,18 +79,47 @@ export const tagValue$: Observable<Record<string, DebugTag>> = mergeReducer<
           [value.id]: {
             ...value,
             refs: [],
-            latestValue: undefined,
+            latestValues: {},
           },
         };
-      case 2: // tagValueChanged
+      case 2: // tagSubscription
         return {
           ...state,
           [value.id]: {
             ...state[value.id],
-            latestValue: value.value,
+            latestValues: {
+              ...state[value.id].latestValues,
+              [value.sid]: undefined,
+            },
           },
         };
-      case 3: // tagRefDetection
+      case 3: // tagUnsubscription
+        const { [value.sid]: _, ...latestValues } = state[
+          value.id
+        ].latestValues;
+        return {
+          ...state,
+          [value.id]: {
+            ...state[value.id],
+            latestValues,
+          },
+        };
+      case 4: // tagValueChanged
+        const values = {
+          ...state[value.id].latestValues,
+        };
+        if (values[value.sid] === value.value) {
+          return state;
+        }
+        values[value.sid] = value.value;
+        return {
+          ...state,
+          [value.id]: {
+            ...state[value.id],
+            latestValues: values,
+          },
+        };
+      case 5: // tagRefDetection
         if (state[value.id].refs.includes(value.ref)) {
           return state;
         }
@@ -92,11 +135,20 @@ export const tagValue$: Observable<Record<string, DebugTag>> = mergeReducer<
   },
   tagReset$,
   newTag$,
+  tagSubscription$,
+  tagUnsubscription$,
   tagValueChange$,
   tagRefDetection$
 ).pipe(publish());
 (tagValue$ as any).connect();
 
+window.postMessage(
+  {
+    source: 'rxjs-traces-bridge',
+    payload: JSON.stringify({}),
+  },
+  window.location.origin
+);
 tagValue$.subscribe(payload => {
   window.postMessage(
     {
@@ -134,10 +186,6 @@ export const addDebugTag = (label: string, id = label) => <T>(
             valueRefs: undefined,
           };
 
-      tagValueChange$.next({
-        id,
-        value,
-      });
       if (valueRefs) {
         valueRefs.forEach(ref =>
           tagRefDetection$.next({
@@ -164,5 +212,30 @@ export const addDebugTag = (label: string, id = label) => <T>(
     })
   ) as any;
   result.isDebugTag = true;
-  return result as Observable<T>;
+  return (result as Observable<T>).pipe(
+    source =>
+      new Observable<T>(obs => {
+        const sid = uuid();
+
+        tagSubscription$.next({
+          id,
+          sid,
+        });
+
+        return source
+          .pipe(
+            tap(value => {
+              tagValueChange$.next({
+                id,
+                sid,
+                value,
+              });
+            }),
+            finalize(() => {
+              tagUnsubscription$.next({ id, sid });
+            })
+          )
+          .subscribe(obs);
+      })
+  );
 };

@@ -1,3 +1,5 @@
+import { Observable } from 'rxjs';
+
 export const Refs = Symbol('rxjs-debug-refs');
 
 export interface WrappedValue<T = unknown> {
@@ -6,7 +8,7 @@ export interface WrappedValue<T = unknown> {
 }
 
 export const valueIsWrapped = <T>(value: any): value is WrappedValue<T> =>
-  Boolean(value && value[Refs]);
+  Boolean(value && value[Refs] && !(value instanceof Observable));
 
 export const unwrapValue = <T>(value: T | WrappedValue<T>) => {
   if (valueIsWrapped(value)) {

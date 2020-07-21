@@ -1,11 +1,11 @@
-import { Subject } from 'rxjs';
+import { ReplaySubject } from 'rxjs';
 import type { DebugTag } from 'rxjs-traces';
 import { filter, map } from 'rxjs/operators';
 
-const tagValue$ = new Subject<{
+const tagValue$ = new ReplaySubject<{
   tabId: number,
   tagValues: Record<string, DebugTag>
-}>();
+}>(1);
 
 chrome.runtime.onMessage.addListener(
   function(message, sender) {

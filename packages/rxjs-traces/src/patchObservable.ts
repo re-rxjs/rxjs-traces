@@ -14,27 +14,25 @@ const valuesStack: any[] = []; // TODO document this is for mergeMap case
 const originalSubscribe = Observable.prototype.subscribe;
 type ComposableSubscribe<T> = (
   this: Observable<T>,
-  observer: Partial<Observer<T>>
+  observer: Observer<T>
 ) => Subscription;
 const findChildRefsSubscribe = <T>(
   parent: ComposableSubscribe<T>
 ): ComposableSubscribe<T> =>
-  function(this: Observable<T>, observer: Partial<Observer<T>>) {
+  function(this: Observable<T>, observer: Observer<T>) {
     const childObservable = observableStack.pop();
     if (childObservable && !childObservable[Refs]) {
       childObservable[Refs] = new Set();
     }
     const result = parent.call(this, {
-      next:
-        observer.next &&
-        ((value: T) => {
-          if (childObservable && valueIsWrapped(value)) {
-            value[Refs].forEach(ref => childObservable[Refs].add(ref));
-          }
-          observer.next!(value);
-        }),
-      error: observer.error?.bind(observer),
-      complete: observer.complete?.bind(observer),
+      next: (value: T) => {
+        if (childObservable && valueIsWrapped(value)) {
+          value[Refs].forEach(ref => childObservable[Refs].add(ref));
+        }
+        observer.next!(value);
+      },
+      error: observer.error.bind(observer),
+      complete: observer.complete.bind(observer),
     });
     if (childObservable) {
       observableStack.push(childObservable);
@@ -44,7 +42,7 @@ const findChildRefsSubscribe = <T>(
 const subscribeWithPatch = <T>(
   parent: ComposableSubscribe<T>
 ): ComposableSubscribe<T> =>
-  function(this: Observable<T>, observer: Partial<Observer<T>>) {
+  function(this: Observable<T>, observer: Observer<T>) {
     if (this.operator && !(this.operator as any)[Patched]) {
       const originalOperator = this.operator;
       this.operator = {
@@ -152,7 +150,6 @@ const subscribeWithPatch = <T>(
                       value,
                       [Refs]: new Set(),
                     };
-
                 if ((this as any)[Refs]) {
                   (this as any)[Refs].forEach((ref: string) =>
                     wrapped[Refs].add(ref)
@@ -176,21 +173,19 @@ const subscribeWithPatch = <T>(
 const unwrappedSubscribe = <T>(
   parent: ComposableSubscribe<T>
 ): ComposableSubscribe<T> =>
-  function(this: Observable<T>, observer: Partial<Observer<T>>) {
+  function(this: Observable<T>, observer: Observer<T>) {
     return parent.call(this, {
-      next:
-        observer.next &&
-        ((value: T) => {
-          const unwrappedValue = unwrapValue(value);
-          valuesStack.push({
-            value: unwrappedValue,
-            refs: valueIsWrapped(value) ? value[Refs] : new Set(),
-          });
-          observer.next!(unwrapValue(value));
-          valuesStack.pop();
-        }),
-      error: observer.error?.bind(observer),
-      complete: observer.complete?.bind(observer),
+      next: (value: T) => {
+        const unwrappedValue = unwrapValue(value);
+        valuesStack.push({
+          value: unwrappedValue,
+          refs: valueIsWrapped(value) ? value[Refs] : new Set(),
+        });
+        observer.next!(unwrappedValue);
+        valuesStack.pop();
+      },
+      error: observer.error.bind(observer),
+      complete: observer.complete.bind(observer),
     });
   };
 
@@ -255,8 +250,8 @@ export const unpatchedMap = <T, R>(mapFn: (value: T) => R) => (
       findChildRefsSubscribe<T>(originalSubscribe as any)
     ).call(source$, {
       next: (value: T) => obs.next(mapFn(value)),
-      error: obs.error?.bind(obs),
-      complete: obs.complete?.bind(obs),
+      error: obs.error.bind(obs),
+      complete: obs.complete.bind(obs),
     })
   );
 
@@ -266,7 +261,7 @@ export const mapWithoutChildRef = <T, R>(mapFn: (value: T) => R) => (
   new Observable(obs =>
     subscribeWithPatch<T>(originalSubscribe as any).call(source$, {
       next: (value: T) => obs.next(mapFn(value)),
-      error: obs.error?.bind(obs),
-      complete: obs.complete?.bind(obs),
+      error: obs.error.bind(obs),
+      complete: obs.complete.bind(obs),
     })
   );
