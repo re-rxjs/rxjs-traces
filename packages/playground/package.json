@@ -15,7 +15,7 @@
     "react-rxjs": "^3.0.0-alpha.5",
     "react-scripts": "3.4.1",
     "rxjs": "^6.6.0",
-    "rxjs-traces": "0.1.0-alpha.4",
+    "rxjs-traces": "^0.1.0-alpha.1",
     "typescript": "~3.7.2"
   },
   "scripts": {

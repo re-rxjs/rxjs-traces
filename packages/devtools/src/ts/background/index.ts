@@ -9,10 +9,10 @@ const tagValue$ = new ReplaySubject<{
 
 chrome.runtime.onMessage.addListener(
   function(message, sender) {
-    if(sender.tab && sender.tab.id) {
+    if(sender.tab && sender.tab.id && message.type === "rxjs-traces") {
       tagValue$.next({
         tabId: sender.tab.id,
-        tagValues: message
+        tagValues: message.payload
       });
     }
   });
