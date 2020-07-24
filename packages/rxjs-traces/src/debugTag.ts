@@ -5,7 +5,6 @@ import {
   scan,
   startWith,
   publish,
-  finalize,
   tap,
 } from 'rxjs/operators';
 import { mapWithoutChildRef, Patched } from './patchObservable';
@@ -153,7 +152,8 @@ window.addEventListener('message', (event: MessageEvent) => {
   if (
     data &&
     typeof data === 'object' &&
-    data.source === 'rxjs-traces-bridge'
+    data.source === 'rxjs-traces-bridge' &&
+    data.type === 'receive'
   ) {
     if (extensionSubscription) {
       extensionSubscription.unsubscribe();
@@ -240,7 +240,7 @@ export const addDebugTag = (label: string, id = label) => <T>(
           sid,
         });
 
-        return source
+        const sub = source
           .pipe(
             tap((value) => {
               tagValueChange$.next({
@@ -248,12 +248,13 @@ export const addDebugTag = (label: string, id = label) => <T>(
                 sid,
                 value,
               });
-            }),
-            finalize(() => {
-              tagUnsubscription$.next({ id, sid });
             })
           )
           .subscribe(obs);
+        return () => {
+          tagUnsubscription$.next({ id, sid });
+          sub.unsubscribe();
+        };
       })
   );
 };

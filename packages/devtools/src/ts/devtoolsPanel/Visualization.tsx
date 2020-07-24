@@ -1,16 +1,19 @@
 import React, { useEffect, useRef, FC } from "react"
-import { DataSet, Network } from "vis-network/standalone"
+import {
+  DataSet,
+  Network,
+  NodeOptions,
+  EdgeOptions,
+} from "vis-network/standalone"
 import type { DebugTag } from "rxjs-traces"
 
-interface Node {
+interface Node extends NodeOptions {
   id: string
-  label: string
 }
-interface Edge {
+interface Edge extends EdgeOptions {
   id: string
   from: string
   to: string
-  arrows: string
 }
 export const Visualization: FC<{
   tags: Record<string, DebugTag>
@@ -42,13 +45,12 @@ export const Visualization: FC<{
     const newNodes: Node[] = []
     const nodesToRemove: string[] = []
     allTags.forEach((tag) => {
-      if (Object.keys(tag.latestValues).length < 0) {
-        nodesToRemove.push(tag.id)
-        return
-      }
+      const activeSubscriptions = Object.keys(tag.latestValues).length
+
       const node: Node = {
         id: tag.id,
         label: `${tag.label} (${formatValue(tag.latestValues)})`,
+        color: activeSubscriptions === 0 ? "#cadffc" : "#97c2fc",
       }
       if (currentNodeIds.includes(tag.id)) {
         nodeUpdates.push(node)

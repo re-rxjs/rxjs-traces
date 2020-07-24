@@ -12,11 +12,13 @@ const random$ = interval(500).pipe(
 )
 random$.subscribe()
 
-const stream = interval(3000).pipe(
+const stream = interval(2000).pipe(
   addDebugTag("interval"),
   switchMap((v, i) => {
     if (i > 0 && i % 3 === 0) {
       return random$.pipe(take(1))
+    } else if (i > 0 && i % 4 === 0) {
+      return of(v).pipe(addDebugTag("embedded"))
     }
     return of(v)
   }),

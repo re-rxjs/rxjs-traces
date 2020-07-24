@@ -26,7 +26,7 @@ const handleMessage = (event: MessageEvent) => {
   ) {
     if (data.type === "connected") {
       requestMessages()
-    } else {
+    } else if (data.type !== "receive") {
       chrome.runtime.sendMessage({
         type: "rxjs-traces",
         payload: JSON.parse(data.payload),
