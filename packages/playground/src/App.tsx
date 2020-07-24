@@ -1,36 +1,34 @@
-import React, { Suspense } from 'react';
-import { connectObservable, shareLatest } from 'react-rxjs';
-import { interval, of } from 'rxjs';
-import { addDebugTag } from 'rxjs-traces';
-import { map, switchMap, take } from 'rxjs/operators';
-import './App.css';
+import React, { Suspense } from "react"
+import { connectObservable, shareLatest } from "react-rxjs"
+import { interval, of } from "rxjs"
+import { addDebugTag } from "rxjs-traces"
+import { map, switchMap, take } from "rxjs/operators"
+import "./App.css"
 
 const random$ = interval(500).pipe(
   map(() => Math.random()),
   shareLatest(),
-  addDebugTag('random')
-);
-random$.subscribe();
+  addDebugTag("random"),
+)
+random$.subscribe()
 
 const stream = interval(3000).pipe(
-  addDebugTag('interval'),
-  switchMap((v,i) => {
-    if(i > 0 && i % 3 === 0) {
-      return random$.pipe(
-        take(1)
-      )
+  addDebugTag("interval"),
+  switchMap((v, i) => {
+    if (i > 0 && i % 3 === 0) {
+      return random$.pipe(take(1))
     }
-    return of(v);
+    return of(v)
   }),
-  addDebugTag('result')
-);
+  addDebugTag("result"),
+)
 
-const [useStream] = connectObservable(stream);
+const [useStream] = connectObservable(stream)
 
 const RandomComponent = () => {
-  useStream();
+  useStream()
 
-  return null;
+  return null
 }
 
 function App() {
@@ -40,7 +38,7 @@ function App() {
         <RandomComponent />
       </Suspense>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App

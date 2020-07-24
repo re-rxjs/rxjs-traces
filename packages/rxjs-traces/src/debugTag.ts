@@ -54,7 +54,7 @@ const mergeReducer = <T>(
 ) =>
   merge(
     ...observables.map((obs, index) =>
-      obs.pipe(map(value => ({ index, value })))
+      obs.pipe(map((value) => ({ index, value })))
     )
   ).pipe(
     scan(reducer, initialValue),
@@ -143,18 +143,22 @@ export const tagValue$: Observable<Record<string, DebugTag>> = mergeReducer<
 (tagValue$ as any).connect();
 
 let extensionSubscription: Subscription | null = null;
-window.addEventListener("message", (event: MessageEvent) => {
+window.addEventListener('message', (event: MessageEvent) => {
   const { data, origin } = event;
 
-	if(origin !== window.location.origin) {
-		return;
-	}
+  if (origin !== window.location.origin) {
+    return;
+  }
 
-	if(data && typeof data === 'object' && data.source === 'rxjs-traces-bridge') {
-		if(extensionSubscription) {
+  if (
+    data &&
+    typeof data === 'object' &&
+    data.source === 'rxjs-traces-bridge'
+  ) {
+    if (extensionSubscription) {
       extensionSubscription.unsubscribe();
     }
-    extensionSubscription = tagValue$.subscribe(payload => {
+    extensionSubscription = tagValue$.subscribe((payload) => {
       window.postMessage(
         {
           source: 'rxjs-traces-bridge',
@@ -163,12 +167,15 @@ window.addEventListener("message", (event: MessageEvent) => {
         window.location.origin
       );
     });
-	}
+  }
 });
-window.postMessage({
-  source: 'rxjs-traces-bridge',
-  type: 'connected'
-}, window.location.origin);
+window.postMessage(
+  {
+    source: 'rxjs-traces-bridge',
+    type: 'connected',
+  },
+  window.location.origin
+);
 
 // Internal (just to reset tests);
 export const resetTag$ = () => tagReset$.next();
@@ -186,7 +193,7 @@ export const addDebugTag = (label: string, id = label) => <T>(
 
   let warningShown = false;
   const result = source.pipe(
-    mapWithoutChildRef(v => {
+    mapWithoutChildRef((v) => {
       const { value, valueRefs } = valueIsWrapped(v)
         ? {
             value: v.value,
@@ -198,7 +205,7 @@ export const addDebugTag = (label: string, id = label) => <T>(
           };
 
       if (valueRefs) {
-        valueRefs.forEach(ref =>
+        valueRefs.forEach((ref) =>
           tagRefDetection$.next({
             id,
             ref,
@@ -224,8 +231,8 @@ export const addDebugTag = (label: string, id = label) => <T>(
   ) as any;
   result.isDebugTag = true;
   return (result as Observable<T>).pipe(
-    source =>
-      new Observable<T>(obs => {
+    (source) =>
+      new Observable<T>((obs) => {
         const sid = uuid();
 
         tagSubscription$.next({
@@ -235,7 +242,7 @@ export const addDebugTag = (label: string, id = label) => <T>(
 
         return source
           .pipe(
-            tap(value => {
+            tap((value) => {
               tagValueChange$.next({
                 id,
                 sid,
