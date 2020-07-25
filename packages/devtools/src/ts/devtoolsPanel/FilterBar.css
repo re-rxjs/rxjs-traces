@@ -1,0 +1,8 @@
+.filter-bar {
+  border-bottom: solid thin lightgray;
+}
+.filter-bar > input {
+  width: 100%;
+  outline: none;
+  border: none;
+}

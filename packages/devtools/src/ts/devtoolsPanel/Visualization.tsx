@@ -17,12 +17,24 @@ interface Edge extends EdgeOptions {
   to: string
 }
 
+const nodeColors = {
+  filterHit: {
+    active: "#fc9797",
+    inactive: "#fccaca",
+  },
+  filterMiss: {
+    active: "#97c2fc",
+    inactive: "#cadffc",
+  },
+}
+
 const noop = () => void 0
 export const Visualization: FC<{
   tags: Record<string, DebugTag>
+  filter: string
   onSelectNode?: (id: string, x: number, y: number) => void
   onDeselectNode?: (id: string) => void
-}> = ({ tags, onSelectNode = noop, onDeselectNode = noop }) => {
+}> = ({ tags, filter, onSelectNode = noop, onDeselectNode = noop }) => {
   const container = useRef<HTMLDivElement | null>(null)
   const nodes = useRef<DataSet<Node>>(new DataSet())
   const edges = useRef<DataSet<Edge>>(new DataSet())
@@ -73,10 +85,17 @@ export const Visualization: FC<{
     allTags.forEach(tag => {
       const activeSubscriptions = Object.keys(tag.latestValues).length
 
+      const isActive = activeSubscriptions > 0
+      const filterHit =
+        filter &&
+        tag.label.toLocaleLowerCase().includes(filter.toLocaleLowerCase())
       const node: Node = {
         id: tag.id,
         label: tag.label,
-        color: activeSubscriptions === 0 ? "#cadffc" : "#97c2fc",
+        color:
+          nodeColors[filterHit ? "filterHit" : "filterMiss"][
+            isActive ? "active" : "inactive"
+          ],
       }
       if (currentNodeIds.includes(tag.id)) {
         nodeUpdates.push(node)

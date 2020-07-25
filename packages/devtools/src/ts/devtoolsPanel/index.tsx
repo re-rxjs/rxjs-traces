@@ -8,6 +8,7 @@ import { Visualization } from "./Visualization"
 import { deserialize } from "./deserialize"
 import { useState } from "react"
 import { TagOverlay } from "./TagOverlay"
+import { FilterBar } from "./FilterBar"
 
 const copy$ = new Subject<string>()
 const tagValue$ = new Observable<Record<string, DebugTag>>(obs => {
@@ -44,10 +45,13 @@ interface TagSelection {
 const App = () => {
   const [selectedTag, setSelectedTag] = useState<TagSelection | null>(null)
   const tags = useTagValues()
+  const [filter, setFilter] = useState("")
 
   return (
     <>
+      <FilterBar filter={filter} onFilterChange={setFilter} />
       <Visualization
+        filter={filter}
         tags={tags}
         onSelectNode={(id, x, y) => setSelectedTag({ id, x, y })}
         onDeselectNode={() => setSelectedTag(null)}
