@@ -15,25 +15,25 @@ export const patchOperator = <
    */
   const result = (...args: any[]) => {
     const argRefs = new Set<string>();
-    const mappedArgs = args.map((arg) => {
+    const mappedArgs = args.map(arg => {
       if (arg instanceof Observable) {
         return arg.pipe(
-          mapWithoutChildRef((value) => {
+          mapWithoutChildRef(value => {
             if (valueIsWrapped(value)) {
-              value[Refs].forEach((ref) => argRefs.add(ref));
+              value[Refs].forEach(ref => argRefs.add(ref));
             }
             return value;
           })
         );
       }
       if (typeof arg === 'function') {
-        return function (this: any, ...argFnArgs: any[]) {
+        return function(this: any, ...argFnArgs: any[]) {
           const argFnResult = arg.call(this, ...argFnArgs);
           if (argFnResult instanceof Observable) {
             return argFnResult.pipe(
-              mapWithoutChildRef((value) => {
+              mapWithoutChildRef(value => {
                 if (valueIsWrapped(value)) {
-                  value[Refs].forEach((ref) => argRefs.add(ref));
+                  value[Refs].forEach(ref => argRefs.add(ref));
                 }
                 return value;
               })
@@ -46,13 +46,13 @@ export const patchOperator = <
     });
     const applied = operator(...mappedArgs);
 
-    return function (stream: Observable<unknown>) {
+    return function(stream: Observable<unknown>) {
       const refs = new Set<string>();
       return applied(
         stream.pipe(
-          mapWithoutChildRef((v) => {
+          mapWithoutChildRef(v => {
             if (valueIsWrapped(v)) {
-              v[Refs].forEach((ref) => refs.add(ref));
+              v[Refs].forEach(ref => refs.add(ref));
               return v.value;
             }
             return v;
@@ -61,9 +61,9 @@ export const patchOperator = <
       ).pipe(
         mapWithoutChildRef(
           (value): WrappedValue => {
-            argRefs.forEach((ref) => refs.add(ref));
+            argRefs.forEach(ref => refs.add(ref));
             if (valueIsWrapped(value)) {
-              value[Refs].forEach((ref) => refs.add(ref));
+              value[Refs].forEach(ref => refs.add(ref));
               return {
                 value: value.value,
                 [Refs]: refs,

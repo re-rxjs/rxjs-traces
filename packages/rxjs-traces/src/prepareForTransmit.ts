@@ -24,14 +24,14 @@ export function prepareForTransmit<T>(
       if (Array.isArray(value)) {
         const result: any[] = [];
         visitedValues.set(value, result);
-        value.forEach((v) => result.push(prepareForTransmit(v, visitedValues)));
+        value.forEach(v => result.push(prepareForTransmit(v, visitedValues)));
         return result;
       }
 
       const result: any = {};
       visitedValues.set(value, result);
       Object.keys(value).forEach(
-        (key) =>
+        key =>
           (result[key] = prepareForTransmit((value as any)[key], visitedValues))
       );
       return result;

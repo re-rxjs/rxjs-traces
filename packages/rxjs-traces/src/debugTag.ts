@@ -54,7 +54,7 @@ const mergeReducer = <T>(
 ) =>
   merge(
     ...observables.map((obs, index) =>
-      obs.pipe(map((value) => ({ index, value })))
+      obs.pipe(map(value => ({ index, value })))
     )
   ).pipe(
     scan(reducer, initialValue),
@@ -159,7 +159,7 @@ window.addEventListener('message', (event: MessageEvent) => {
     if (extensionSubscription) {
       extensionSubscription.unsubscribe();
     }
-    extensionSubscription = tagValue$.subscribe((payload) => {
+    extensionSubscription = tagValue$.subscribe(payload => {
       window.postMessage(
         {
           source: 'rxjs-traces-bridge',
@@ -194,7 +194,7 @@ export const addDebugTag = (label: string, id = label) => <T>(
 
   let warningShown = false;
   const result = source.pipe(
-    mapWithoutChildRef((v) => {
+    mapWithoutChildRef(v => {
       const { value, valueRefs } = valueIsWrapped(v)
         ? {
             value: v.value,
@@ -206,7 +206,7 @@ export const addDebugTag = (label: string, id = label) => <T>(
           };
 
       if (valueRefs) {
-        valueRefs.forEach((ref) =>
+        valueRefs.forEach(ref =>
           tagRefDetection$.next({
             id,
             ref,
@@ -232,8 +232,8 @@ export const addDebugTag = (label: string, id = label) => <T>(
   ) as any;
   result.isDebugTag = true;
   return (result as Observable<T>).pipe(
-    (source) =>
-      new Observable<T>((obs) => {
+    source =>
+      new Observable<T>(obs => {
         const sid = uuid();
 
         tagSubscription$.next({
@@ -243,7 +243,7 @@ export const addDebugTag = (label: string, id = label) => <T>(
 
         const sub = source
           .pipe(
-            tap((value) => {
+            tap(value => {
               tagValueChange$.next({
                 id,
                 sid,
