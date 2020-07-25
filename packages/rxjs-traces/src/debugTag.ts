@@ -10,6 +10,7 @@ import {
 import { mapWithoutChildRef, Patched } from './patchObservable';
 import { Refs, valueIsWrapped } from './wrappedValue';
 import { v4 as uuid } from 'uuid';
+import { prepareForTransmit } from './prepareForTransmit';
 
 export const newTag$ = new Subject<{
   id: string;
@@ -162,7 +163,7 @@ window.addEventListener('message', (event: MessageEvent) => {
       window.postMessage(
         {
           source: 'rxjs-traces-bridge',
-          payload: JSON.stringify(payload),
+          payload: prepareForTransmit(payload),
         },
         window.location.origin
       );

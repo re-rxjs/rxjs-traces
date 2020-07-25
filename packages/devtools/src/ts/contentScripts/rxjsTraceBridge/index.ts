@@ -29,7 +29,7 @@ const handleMessage = (event: MessageEvent) => {
     } else if (data.type !== "receive") {
       chrome.runtime.sendMessage({
         type: "rxjs-traces",
-        payload: JSON.parse(data.payload),
+        payload: data.payload,
       })
     }
   }

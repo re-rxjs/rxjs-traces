@@ -5,6 +5,7 @@ import { DebugTag } from "rxjs-traces"
 import { Observable } from "rxjs"
 import { startWith } from "rxjs/operators"
 import { Visualization } from "./Visualization"
+import { deserialize } from "./deserialize"
 
 const tagValue$ = new Observable<Record<string, DebugTag>>((obs) => {
   var backgroundPageConnection = chrome.runtime.connect({
@@ -12,7 +13,7 @@ const tagValue$ = new Observable<Record<string, DebugTag>>((obs) => {
   })
 
   backgroundPageConnection.onMessage.addListener(function (message) {
-    obs.next(message)
+    obs.next(deserialize(message))
   })
 
   return () => {
