@@ -6,6 +6,7 @@ import {
   EdgeOptions,
 } from "vis-network/standalone"
 import type { DebugTag } from "rxjs-traces"
+import "./Visualization.css"
 
 interface Node extends NodeOptions {
   id: string
@@ -15,13 +16,26 @@ interface Edge extends EdgeOptions {
   from: string
   to: string
 }
+
+const noop = () => void 0
 export const Visualization: FC<{
   tags: Record<string, DebugTag>
-}> = ({ tags }) => {
+  onSelectNode?: (id: string, x: number, y: number) => void
+  onDeselectNode?: (id: string) => void
+}> = ({ tags, onSelectNode = noop, onDeselectNode = noop }) => {
   const container = useRef<HTMLDivElement | null>(null)
   const nodes = useRef<DataSet<Node>>(new DataSet())
   const edges = useRef<DataSet<Edge>>(new DataSet())
   const network = useRef<Network | null>(null)
+
+  const handleSelectEvent = (event: EdgeSelectEvent) => {
+    console.log(event)
+    onSelectNode(event.nodes[0], event.pointer.DOM.x, event.pointer.DOM.y)
+  }
+  const handleDeselectEvent = (event: EdgeDeselectEvent) => {
+    console.log(event)
+    onDeselectNode(event.previousSelection.nodes[0])
+  }
 
   useEffect(() => {
     const { height } = container.current!.getBoundingClientRect()
@@ -39,17 +53,29 @@ export const Visualization: FC<{
   }, [])
 
   useEffect(() => {
+    if (!network.current) {
+      return
+    }
+    network.current.on("selectNode", handleSelectEvent)
+    network.current.on("deselectNode", handleDeselectEvent)
+    return () => {
+      network.current!.off("selectNode", handleSelectEvent)
+      network.current!.off("deselectNode", handleDeselectEvent)
+    }
+  }, [handleSelectEvent, handleDeselectEvent])
+
+  useEffect(() => {
     const currentNodeIds = nodes.current.getIds()
     const allTags = Object.values(tags)
     const nodeUpdates: Node[] = []
     const newNodes: Node[] = []
     const nodesToRemove: string[] = []
-    allTags.forEach((tag) => {
+    allTags.forEach(tag => {
       const activeSubscriptions = Object.keys(tag.latestValues).length
 
       const node: Node = {
         id: tag.id,
-        label: `${tag.label} (${formatValue(tag.latestValues)})`,
+        label: tag.label,
         color: activeSubscriptions === 0 ? "#cadffc" : "#97c2fc",
       }
       if (currentNodeIds.includes(tag.id)) {
@@ -59,7 +85,7 @@ export const Visualization: FC<{
       }
     })
     nodes.current.forEach(({ id }) => {
-      if (!allTags.some((tag) => tag.id === id)) {
+      if (!allTags.some(tag => tag.id === id)) {
         nodesToRemove.push(id)
       }
     })
@@ -70,9 +96,9 @@ export const Visualization: FC<{
     const edgeIds = edges.current.getIds()
     const newEdges: Edge[] = []
     const edgesToRemove = new Set<string>()
-    allTags.forEach((tag) => {
+    allTags.forEach(tag => {
       const refs = Array.from(tag.refs)
-      refs.forEach((ref) => {
+      refs.forEach(ref => {
         const edge: Edge = {
           id: tag.id + "->" + ref,
           from: tag.id,
@@ -84,8 +110,8 @@ export const Visualization: FC<{
         }
       })
     })
-    nodesToRemove.forEach((id) => {
-      edges.current.forEach((edge) => {
+    nodesToRemove.forEach(id => {
+      edges.current.forEach(edge => {
         if (edge.from === id || edge.to === id) {
           edgesToRemove.add(id)
         }
@@ -95,16 +121,27 @@ export const Visualization: FC<{
     if (edgesToRemove.size) edges.current.remove(Array.from(edgesToRemove))
   })
 
-  return <div ref={container}>Container</div>
+  return (
+    <div ref={container} className="visualization">
+      Container
+    </div>
+  )
 }
 
-const formatValue = (value: Record<string, any>) => {
-  const valueStr = JSON.stringify(Object.values(value))
-  if (!valueStr) {
-    return valueStr
+interface EdgeSelectEvent {
+  edges: string[]
+  event: {
+    center: { x: number; y: number }
   }
-  if (valueStr.length > 18) {
-    return valueStr.slice(0, 15) + "..."
+  nodes: string[]
+  pointer: {
+    DOM: { x: number; y: number }
+    canvas: { x: number; y: number }
   }
-  return valueStr
+}
+interface EdgeDeselectEvent extends EdgeSelectEvent {
+  previousSelection: {
+    edges: string[]
+    nodes: string[]
+  }
 }

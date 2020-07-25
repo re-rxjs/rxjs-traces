@@ -1,0 +1,62 @@
+.tag-overlay {
+  visibility: hidden; /* will be set to visible when positioned */
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0.5em;
+  border-radius: 1em;
+  border: solid thin lightgray;
+  box-shadow: 0px 2px 3px -1px rgba(0, 0, 0, 0.5);
+}
+.tag-overlay__header {
+  user-select: none;
+  cursor: grab;
+  border-bottom: solid thin lightgray;
+  margin-bottom: 0.3em;
+}
+.tag-overlay__content {
+  overflow: auto;
+}
+.tag-overlay__header:active {
+  cursor: grabbing;
+}
+
+.value-inspector {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.value-inspector__expand-toggle {
+  cursor: pointer;
+  border: solid thin lightgray;
+  border-radius: 0.5em;
+  width: 1.2em;
+  display: inline-block;
+  text-align: center;
+}
+.value-inspector__expand-spacer {
+  display: inline-block;
+  width: 1.2em;
+}
+.value-inspector__expanded {
+  padding-left: 1em;
+}
+.value-inspector__label {
+  margin: 0 0.3em;
+  color: #881391;
+}
+.value-inspector__value-rep--string {
+  color: #c41a16;
+}
+.value-inspector__value-rep--boolean,
+.value-inspector__value-rep--number {
+  color: #0d22aa;
+}

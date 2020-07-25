@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html>
-	<head> 
-		<meta charset="UTF-8">
-		<title><%= htmlWebpackPlugin.options.title %></title>
-		<style type="text/css">
-			body, html, #popup-root, #popup-root > div {
-				height: 100%;
-				margin: 0;
-			}
-		</style>
-	</head>
-	<body>
+  <head>
+    <meta charset="UTF-8" />
+    <title><%= htmlWebpackPlugin.options.title %></title>
+    <style type="text/css">
+      body,
+      html,
+      #popup-root,
+      #popup-root {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
     <div id="popup-root"></div>
-	</body>
+  </body>
 </html>
