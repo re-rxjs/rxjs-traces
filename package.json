@@ -5,6 +5,7 @@
     "packages/*"
   ],
   "scripts": {
+    "start": "wsrun -mt --done-criteria=\"Compiled successfully\" -c start",
     "build": "wsrun -mt build"
   },
   "prettier": {

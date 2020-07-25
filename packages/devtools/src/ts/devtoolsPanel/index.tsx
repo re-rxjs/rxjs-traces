@@ -2,13 +2,14 @@ import * as React from "react"
 import ReactDOM from "react-dom"
 import { connectObservable } from "react-rxjs"
 import { DebugTag } from "rxjs-traces"
-import { Observable } from "rxjs"
+import { Observable, Subject } from "rxjs"
 import { startWith } from "rxjs/operators"
 import { Visualization } from "./Visualization"
 import { deserialize } from "./deserialize"
 import { useState } from "react"
 import { TagOverlay } from "./TagOverlay"
 
+const copy$ = new Subject<string>()
 const tagValue$ = new Observable<Record<string, DebugTag>>(obs => {
   var backgroundPageConnection = chrome.runtime.connect({
     name: "devtools-page_" + chrome.devtools.inspectedWindow.tabId,
@@ -18,8 +19,16 @@ const tagValue$ = new Observable<Record<string, DebugTag>>(obs => {
     obs.next(deserialize(message))
   })
 
+  const copySubscription = copy$.subscribe(payload => {
+    backgroundPageConnection.postMessage({
+      type: "copy",
+      payload,
+    })
+  })
+
   return () => {
     backgroundPageConnection.disconnect()
+    copySubscription.unsubscribe()
   }
 })
 
@@ -48,6 +57,7 @@ const App = () => {
           tag={tags[selectedTag.id]}
           initialX={selectedTag.x}
           initialY={selectedTag.y}
+          onCopy={value => copy$.next(value)}
         />
       )}
     </>

@@ -7,7 +7,7 @@ const tagValue$ = new ReplaySubject<{
   tagValues: Record<string, DebugTag>
 }>(1)
 
-chrome.runtime.onMessage.addListener(function (message, sender) {
+chrome.runtime.onMessage.addListener(function(message, sender) {
   if (sender.tab && sender.tab.id && message.type === "rxjs-traces") {
     tagValue$.next({
       tabId: sender.tab.id,
@@ -16,7 +16,7 @@ chrome.runtime.onMessage.addListener(function (message, sender) {
   }
 })
 
-chrome.runtime.onConnect.addListener(function (devToolsConnection) {
+chrome.runtime.onConnect.addListener(function(devToolsConnection) {
   if (!devToolsConnection.name.startsWith("devtools-page_")) {
     return
   }
@@ -27,9 +27,28 @@ chrome.runtime.onConnect.addListener(function (devToolsConnection) {
       filter(({ tabId }) => tabId === toolsTabId),
       map(({ tagValues }) => tagValues),
     )
-    .subscribe((value) => devToolsConnection.postMessage(value))
+    .subscribe(value => devToolsConnection.postMessage(value))
 
-  devToolsConnection.onDisconnect.addListener(function () {
+  devToolsConnection.onMessage.addListener(message => {
+    console.log("received message", message)
+    if (typeof message === "object" && message.type === "copy") {
+      document.addEventListener(
+        "copy",
+        e => {
+          if (!e.clipboardData) {
+            console.error("no clipboard data")
+            return
+          }
+          e.clipboardData.setData("text/plain", message.payload)
+          e.preventDefault()
+        },
+        { once: true },
+      )
+      document.execCommand("copy")
+    }
+  })
+
+  devToolsConnection.onDisconnect.addListener(function() {
     subscription.unsubscribe()
   })
 })

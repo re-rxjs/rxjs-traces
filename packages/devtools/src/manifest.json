@@ -1,35 +1,34 @@
 {
-	"name": "Rxjs Traces",
-	"author": "ymdevs",
-	"version": "1.0.0",
-	"description": "Devtools for rxjs-traces",
-	"icons": {
-		"128": "assets/icon-128.png"
-	},
-	"content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
-	"permissions": [
-		"activeTab",
-		"alarms",
-		"bookmarks",
-		"cookies",
-		"storage",
-		"tabs",
-		"webRequest",
-		"webRequestBlocking",
-		"*://*/*"
-	],
-	"manifest_version": 2,
-	"background": {
-		"scripts": [
-			"background.js"
-		],
-		"persistent": true
-	},
+  "name": "Rxjs Traces",
+  "author": "ymdevs",
+  "version": "1.0.0",
+  "description": "Devtools for rxjs-traces",
+  "icons": {
+    "128": "assets/icon-128.png"
+  },
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
+  "permissions": [
+    "activeTab",
+    "alarms",
+    "bookmarks",
+    "cookies",
+    "storage",
+    "tabs",
+    "webRequest",
+    "webRequestBlocking",
+    "clipboardWrite",
+    "*://*/*"
+  ],
+  "manifest_version": 2,
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": true
+  },
   "devtools_page": "devtools.html",
-	"content_scripts": [
-		{
-			"js": ["rxjsTraceBridge.js"],
-			"matches": ["*://*/*"]
-		}
-	]
+  "content_scripts": [
+    {
+      "js": ["rxjsTraceBridge.js"],
+      "matches": ["*://*/*"]
+    }
+  ]
 }

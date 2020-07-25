@@ -4,8 +4,8 @@
 	"description": "Devtools for rxjs-traces",
 	"main": "index.js",
 	"scripts": {
+		"start": "cross-env NODE_ENV=watch webpack -d",
 		"dev": "cross-env NODE_ENV=development webpack -d",
-		"watch": "cross-env NODE_ENV=watch webpack -d",
 		"build": "cross-env NODE_ENV=production webpack -p",
 		"clean": "rm -rf ./dist"
 	},

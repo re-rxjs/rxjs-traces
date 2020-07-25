@@ -6,9 +6,10 @@ export const TagOverlay: FC<{
   tag: DebugTag
   initialX: number
   initialY: number
-}> = ({ tag, initialX, initialY }) => {
+  onCopy?: (value: string) => void
+}> = ({ tag, initialX, initialY, onCopy }) => {
   const ref = useRef<HTMLDivElement | null>(null)
-  const drag = useDrag(ref, initialX, initialY)
+  const drag = useDrag(ref, initialX + 15, initialY)
 
   const subscriptions = Object.keys(tag.latestValues)
 
@@ -21,9 +22,14 @@ export const TagOverlay: FC<{
         {subscriptions.map((sub, index) => (
           <div className="tag-overlay__subscription" key={sub}>
             <ValueInspector
-              label={"subscription " + (index + 1)}
+              label={
+                subscriptions.length > 1
+                  ? "subscription " + (index + 1)
+                  : undefined
+              }
               value={tag.latestValues[sub]}
               level={0}
+              onCopy={onCopy}
             />
           </div>
         ))}
@@ -33,21 +39,36 @@ export const TagOverlay: FC<{
 }
 
 const ValueInspector: FC<{
-  label: string
+  label?: string
   value: any
   level: number
-}> = ({ label, value, level }) => {
+  onCopy?: (value: string) => void
+}> = ({ label, value, level, onCopy = () => void 0 }) => {
   const [expanded, setExpanded] = useState(level < 2)
-  const expandible = typeof value === "object" && value !== null
+  const expandible =
+    typeof value === "object" && Object.keys(value || {}).length > 0
 
-  const valueRep = () => {
-    if (typeof value === "object") {
-      return JSON.stringify(value)
+  const renderInline = () => {
+    const valueRep = () => {
+      if (typeof value === "object") {
+        return JSON.stringify(value)
+      }
+      if (typeof value === "string") {
+        return `"${value}"`
+      }
+      return String(value)
     }
-    if (typeof value === "string") {
-      return `"${value}"`
-    }
-    return String(value)
+
+    return (
+      <span
+        className={
+          "value-inspector__value-rep value-inspector__value-rep--" +
+          typeof value
+        }
+      >
+        {valueRep()}
+      </span>
+    )
   }
 
   const renderExpanded = () => {
@@ -60,37 +81,60 @@ const ValueInspector: FC<{
             label={key}
             value={value[key]}
             level={level + 1}
+            onCopy={onCopy}
           />
         ))}
       </div>
     )
   }
 
+  const expandElement = expandible ? (
+    <span
+      className="value-inspector__expand-toggle"
+      onClick={() => setExpanded(e => !e)}
+    >
+      {expanded ? "-" : "+"}
+    </span>
+  ) : (
+    <span className="value-inspector__expand-spacer" />
+  )
+  const labelElement = <span className="value-inspector__label">{label}:</span>
+  const valueElement =
+    expanded && expandible ? renderExpanded() : renderInline()
+
+  const showCopy = typeof value === "object" && expandible
+  const copyValue = () => {
+    const stringified = new WeakSet<object>()
+    onCopy(
+      JSON.stringify(
+        value,
+        (_, value) => {
+          if (value === undefined) {
+            return "Symbol(undefined)"
+          }
+          if (typeof value === "object" && value !== null) {
+            if (stringified.has(value)) {
+              return "Symbol(Circular reference)"
+            }
+            stringified.add(value)
+          }
+          return value
+        },
+        2,
+      ),
+    )
+  }
+
   return (
     <div className="value-inspector">
-      {level > 0 &&
-        (expandible ? (
-          <span
-            className="value-inspector__expand-toggle"
-            onClick={() => setExpanded(e => !e)}
-          >
-            {expanded ? "-" : "+"}
-          </span>
-        ) : (
-          <span className="value-inspector__expand-spacer" />
-        ))}
-      <span className="value-inspector__label">{label}:</span>
-      {(!expanded || !expandible) && (
-        <span
-          className={
-            "value-inspector__value-rep value-inspector__value-rep--" +
-            typeof value
-          }
-        >
-          {valueRep()}
+      {expandElement}
+      {label && labelElement}
+      {showCopy && (
+        <span className="value-inspector__copy" onClick={copyValue}>
+          📄
         </span>
       )}
-      {expanded && expandible && renderExpanded()}
+      {valueElement}
     </div>
   )
 }

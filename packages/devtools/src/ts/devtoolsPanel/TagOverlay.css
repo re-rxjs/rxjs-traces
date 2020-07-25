@@ -10,7 +10,8 @@
 
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(2px);
   padding: 0.5em;
   border-radius: 1em;
   border: solid thin lightgray;
@@ -33,6 +34,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: Consolas, monaco, monospace;
+}
+.value-inspector__copy {
+  cursor: pointer;
+  margin: 0 0.3em;
 }
 .value-inspector__expand-toggle {
   cursor: pointer;
@@ -44,6 +50,7 @@
 }
 .value-inspector__expand-spacer {
   display: inline-block;
+  border: solid thin transparent;
   width: 1.2em;
 }
 .value-inspector__expanded {

@@ -1,16 +1,19 @@
-import React from "react"
+import React, { lazy, Suspense } from "react"
 import ReactDOM from "react-dom"
 import "./index.css"
-import App from "./App"
 import * as serviceWorker from "./serviceWorker"
 import { Observable } from "rxjs"
 import { patchObservable } from "rxjs-traces"
 
 patchObservable(Observable)
 
+const App = lazy(() => import("./App"))
+
 ReactDOM.render(
   <React.StrictMode>
-    <App />
+    <Suspense fallback={<div />}>
+      <App />
+    </Suspense>
   </React.StrictMode>,
   document.getElementById("root"),
 )
