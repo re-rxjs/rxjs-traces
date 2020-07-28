@@ -1,40 +1,15 @@
 import * as React from "react"
 import ReactDOM from "react-dom"
-import { connectObservable } from "react-rxjs"
-import { DebugTag } from "rxjs-traces"
-import { Observable, Subject } from "rxjs"
-import { startWith } from "rxjs/operators"
+import { connectFactoryObservable } from "react-rxjs"
 import { Visualization } from "./Visualization"
-import { deserialize } from "./deserialize"
 import { useState } from "react"
 import { TagOverlay } from "./TagOverlay"
 import { FilterBar } from "./FilterBar"
+import { tagValue$, copy$ } from "./messaging"
+import { TimeTravelSlider } from "./TimeTravelSlider"
 
-const copy$ = new Subject<string>()
-const tagValue$ = new Observable<Record<string, DebugTag>>(obs => {
-  var backgroundPageConnection = chrome.runtime.connect({
-    name: "devtools-page_" + chrome.devtools.inspectedWindow.tabId,
-  })
-
-  backgroundPageConnection.onMessage.addListener(function(message) {
-    obs.next(deserialize(message))
-  })
-
-  const copySubscription = copy$.subscribe(payload => {
-    backgroundPageConnection.postMessage({
-      type: "copy",
-      payload,
-    })
-  })
-
-  return () => {
-    backgroundPageConnection.disconnect()
-    copySubscription.unsubscribe()
-  }
-})
-
-const [useTagValues] = connectObservable(
-  tagValue$.pipe(startWith({} as Record<string, DebugTag>)),
+const [useTagValues] = connectFactoryObservable((slice: number | null) =>
+  tagValue$(slice),
 )
 
 interface TagSelection {
@@ -44,7 +19,8 @@ interface TagSelection {
 }
 const App = () => {
   const [selectedTag, setSelectedTag] = useState<TagSelection | null>(null)
-  const tags = useTagValues()
+  const [slice, setSlice] = useState<null | number>(null)
+  const tags = useTagValues(slice)
   const [filter, setFilter] = useState("")
 
   return (
@@ -64,6 +40,7 @@ const App = () => {
           onCopy={value => copy$.next(value)}
         />
       )}
+      <TimeTravelSlider slice={slice} onSliceChange={setSlice} />
     </>
   )
 }

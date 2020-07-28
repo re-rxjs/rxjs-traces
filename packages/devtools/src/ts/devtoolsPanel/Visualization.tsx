@@ -41,11 +41,9 @@ export const Visualization: FC<{
   const network = useRef<Network | null>(null)
 
   const handleSelectEvent = (event: EdgeSelectEvent) => {
-    console.log(event)
     onSelectNode(event.nodes[0], event.pointer.DOM.x, event.pointer.DOM.y)
   }
   const handleDeselectEvent = (event: EdgeDeselectEvent) => {
-    console.log(event)
     onDeselectNode(event.previousSelection.nodes[0])
   }
 
