@@ -1,0 +1,7 @@
+.time-travel {
+  display: flex;
+}
+
+.time-travel__slider {
+  flex: 1 1 auto;
+}

@@ -1,18 +1,17 @@
-import { merge, Observable, Subject, Subscription } from 'rxjs';
+import { merge, Observable, Subject, ReplaySubject } from 'rxjs';
 import {
   distinctUntilChanged,
   map,
+  publish,
   scan,
   startWith,
-  publish,
   tap,
 } from 'rxjs/operators';
+import { v4 as uuid } from 'uuid';
 import { mapWithoutChildRef, Patched } from './patchObservable';
 import { Refs, valueIsWrapped } from './wrappedValue';
-import { v4 as uuid } from 'uuid';
-import { prepareForTransmit } from './prepareForTransmit';
 
-export const newTag$ = new Subject<{
+export const newTag$ = new ReplaySubject<{
   id: string;
   label: string;
 }>();
@@ -141,42 +140,6 @@ export const tagValue$: Observable<Record<string, DebugTag>> = mergeReducer<
   tagRefDetection$
 ).pipe(publish());
 (tagValue$ as any).connect();
-
-let extensionSubscription: Subscription | null = null;
-window.addEventListener('message', (event: MessageEvent) => {
-  const { data, origin } = event;
-
-  if (origin !== window.location.origin) {
-    return;
-  }
-
-  if (
-    data &&
-    typeof data === 'object' &&
-    data.source === 'rxjs-traces-bridge' &&
-    data.type === 'receive'
-  ) {
-    if (extensionSubscription) {
-      extensionSubscription.unsubscribe();
-    }
-    extensionSubscription = tagValue$.subscribe(payload => {
-      window.postMessage(
-        {
-          source: 'rxjs-traces-bridge',
-          payload: prepareForTransmit(payload),
-        },
-        window.location.origin
-      );
-    });
-  }
-});
-window.postMessage(
-  {
-    source: 'rxjs-traces-bridge',
-    type: 'connected',
-  },
-  window.location.origin
-);
 
 // Internal (just to reset tests);
 export const resetTag$ = () => tagReset$.next();

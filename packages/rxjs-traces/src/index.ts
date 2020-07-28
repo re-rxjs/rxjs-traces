@@ -1,3 +1,7 @@
+import { initDevtools } from './devtools';
+
+initDevtools();
+
 export {
   addDebugTag,
   DebugTag,

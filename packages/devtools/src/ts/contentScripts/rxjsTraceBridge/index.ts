@@ -5,7 +5,7 @@ const requestMessages = () => {
   })
   window.postMessage(
     {
-      source: "rxjs-traces-bridge",
+      source: "rxjs-traces-devtools",
       type: "receive",
     },
     window.location.origin,
@@ -19,16 +19,15 @@ const handleMessage = (event: MessageEvent) => {
     return
   }
 
-  if (
-    data &&
-    typeof data === "object" &&
-    data.source === "rxjs-traces-bridge"
-  ) {
+  if (typeof data === "object" && data.source === "rxjs-traces") {
     if (data.type === "connected") {
-      requestMessages()
-    } else if (data.type !== "receive") {
       chrome.runtime.sendMessage({
-        type: "rxjs-traces",
+        type: "reset",
+      })
+      requestMessages()
+    } else {
+      chrome.runtime.sendMessage({
+        type: data.type,
         payload: data.payload,
       })
     }
@@ -38,6 +37,6 @@ const handleMessage = (event: MessageEvent) => {
 window.addEventListener("message", handleMessage, false)
 requestMessages()
 
-chrome.runtime.connect().onDisconnect.addListener(function () {
+chrome.runtime.connect().onDisconnect.addListener(function() {
   window.removeEventListener("message", handleMessage)
 })

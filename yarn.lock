@@ -1333,6 +1333,11 @@
     "@types/yargs" "^15.0.0"
     chalk "^3.0.0"
 
+"@josepot/rxjs-utils@^0.15.2":
+  version "0.15.2"
+  resolved "https://registry.yarnpkg.com/@josepot/rxjs-utils/-/rxjs-utils-0.15.2.tgz#c889c1787a48ff36fcbf31cdb13ee1beaec577a9"
+  integrity sha512-IBADdo6Jaupj2202gDvMxS73IUNgXGFQ+iek3fbCBff3U91257glZQdQWje+UMtZgnUVH57Wc2o0sfPvW6hJXg==
+
 "@mrmlnc/readdir-enhanced@^2.2.1":
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/@mrmlnc/readdir-enhanced/-/readdir-enhanced-2.2.1.tgz#524af240d1a360527b730475ecfa1344aa540dde"
