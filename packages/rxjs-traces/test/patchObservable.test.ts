@@ -1,4 +1,4 @@
-import { concat, Observable, of, interval, merge } from 'rxjs';
+import { concat, Observable, of, interval, merge, from } from 'rxjs';
 import { marbles } from 'rxjs-marbles/jest';
 import {
   concatMap,
@@ -10,6 +10,7 @@ import {
   takeLast,
   withLatestFrom,
   take,
+  share,
 } from 'rxjs/operators';
 import { addDebugTag, patchObservable, tagValue$ } from '../src';
 import { resetTag$ } from '../src/debugTag';
@@ -85,6 +86,17 @@ describe('patchObservable', () => {
         (stream as any).connect();
 
         m.expect(stream).toBeObservable(expected);
+        m.expect(stream).toBeObservable(expected);
+      })
+    );
+
+    it(
+      `doesn't break synchronous share`,
+      marbles(m => {
+        const source = from(['a', 'b', 'c']);
+        const expected = '(abc|)';
+        const stream = source.pipe(share());
+
         m.expect(stream).toBeObservable(expected);
       })
     );

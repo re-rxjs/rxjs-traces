@@ -4,6 +4,7 @@ import {
   Subscriber,
   Subscription,
   Observer,
+  ConnectableObservable,
 } from 'rxjs';
 import { Refs, unwrapValue, valueIsWrapped } from './wrappedValue';
 
@@ -60,6 +61,15 @@ const subscribeWithPatch = <T>(
               innerOperatorSubscriber = subscriber;
             },
           } as Observable<any>;
+          // refCount subscribes and connects - We must keep this order.
+          const originalConnectable: ConnectableObservable<T> = (originalOperator as any)
+            .connectable;
+          const connection = new Subscription();
+          if (originalConnectable) {
+            (originalOperator as any).connectable = {
+              connect: () => connection,
+            };
+          }
           observableStack.push(this);
           originalOperator.call(
             new Subscriber({
@@ -97,7 +107,8 @@ const subscribeWithPatch = <T>(
             fakeSource
           );
           observableStack.pop();
-          return source
+
+          const resultSubscription = source
             .pipe(
               unpatchedMap(value => {
                 if (valueIsWrapped(value)) {
@@ -108,6 +119,13 @@ const subscribeWithPatch = <T>(
               })
             )
             .subscribe(innerOperatorSubscriber);
+
+          if (originalConnectable) {
+            connection.add(originalConnectable.connect());
+          } else {
+            connection.unsubscribe();
+          }
+          return resultSubscription;
         },
       };
       (this.operator as any)[Patched] = true;
