@@ -11,6 +11,8 @@ import {
   withLatestFrom,
   take,
   share,
+  timeout,
+  catchError,
 } from 'rxjs/operators';
 import { addDebugTag, patchObservable, tagValue$ } from '../src';
 import { resetTag$ } from '../src/debugTag';
@@ -98,6 +100,27 @@ describe('patchObservable', () => {
         const stream = source.pipe(share());
 
         m.expect(stream).toBeObservable(expected);
+      })
+    );
+
+    it(
+      `propagates unsubscriptions through share`,
+      marbles(m => {
+        const source = m.cold('-------|');
+        const subs = '         ^---!';
+        const time = m.time('  ----|');
+        const expected = '     ----#';
+
+        const stream = source.pipe(
+          share(),
+          timeout(time),
+          catchError(() => {
+            throw 'error';
+          })
+        );
+
+        m.expect(stream).toBeObservable(expected);
+        m.expect(source).toHaveSubscriptions(subs);
       })
     );
   });

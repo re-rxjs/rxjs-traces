@@ -61,6 +61,37 @@ const subscribeWithPatch = <T>(
               innerOperatorSubscriber = subscriber;
             },
           } as Observable<any>;
+          const wrappedSubscriber = new Subscriber({
+            next: value => {
+              const lastValue = valuesStack.pop();
+              if (lastValue && Object.is(lastValue.value, unwrapValue(value))) {
+                lastValue.refs.forEach((ref: string) => refs.add(ref));
+              }
+
+              if ((this as any)[Refs]) {
+                (this as any)[Refs].forEach((ref: string) => refs.add(ref));
+              }
+              if (valueIsWrapped(value)) {
+                value[Refs].forEach(ref => refs.add(ref));
+                subscriber.next({
+                  value: value.value,
+                  [Refs]: refs,
+                } as any);
+              } else {
+                subscriber.next({
+                  value,
+                  [Refs]: refs,
+                } as any);
+              }
+              if (lastValue) {
+                valuesStack.push(lastValue);
+              }
+            },
+            error: subscriber.error.bind(subscriber),
+            complete: subscriber.complete.bind(subscriber),
+          });
+          subscriber.add(wrappedSubscriber); // whenever `subscriber` is unsubscribed, propagate to wrapped.
+
           // refCount subscribes and connects - We must keep this order.
           const originalConnectable: ConnectableObservable<T> = (originalOperator as any)
             .connectable;
@@ -70,40 +101,10 @@ const subscribeWithPatch = <T>(
               connect: () => connection,
             };
           }
-          observableStack.push(this);
-          originalOperator.call(
-            new Subscriber({
-              next: value => {
-                const lastValue = valuesStack.pop();
-                if (
-                  lastValue &&
-                  Object.is(lastValue.value, unwrapValue(value))
-                ) {
-                  lastValue.refs.forEach((ref: string) => refs.add(ref));
-                }
 
-                if ((this as any)[Refs]) {
-                  (this as any)[Refs].forEach((ref: string) => refs.add(ref));
-                }
-                if (valueIsWrapped(value)) {
-                  value[Refs].forEach(ref => refs.add(ref));
-                  subscriber.next({
-                    value: value.value,
-                    [Refs]: refs,
-                  } as any);
-                } else {
-                  subscriber.next({
-                    value,
-                    [Refs]: refs,
-                  } as any);
-                }
-                if (lastValue) {
-                  valuesStack.push(lastValue);
-                }
-              },
-              error: subscriber.error.bind(subscriber),
-              complete: subscriber.complete.bind(subscriber),
-            }),
+          observableStack.push(this);
+          const operatorTeardown = originalOperator.call(
+            wrappedSubscriber,
             fakeSource
           );
           observableStack.pop();
@@ -119,11 +120,11 @@ const subscribeWithPatch = <T>(
               })
             )
             .subscribe(innerOperatorSubscriber);
+          resultSubscription.add(operatorTeardown);
+          resultSubscription.add(connection);
 
           if (originalConnectable) {
             connection.add(originalConnectable.connect());
-          } else {
-            connection.unsubscribe();
           }
           return resultSubscription;
         },
