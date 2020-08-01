@@ -1,6 +1,7 @@
-import { merge, Observable, Subject, ReplaySubject } from 'rxjs';
+import { defer, merge, Observable, ReplaySubject, Subject } from 'rxjs';
 import {
   distinctUntilChanged,
+  finalize,
   map,
   publish,
   scan,
@@ -8,8 +9,6 @@ import {
   tap,
 } from 'rxjs/operators';
 import { v4 as uuid } from 'uuid';
-import { mapWithoutChildRef, Patched } from './patchObservable';
-import { Refs, valueIsWrapped } from './wrappedValue';
 
 export const newTag$ = new ReplaySubject<{
   id: string;
@@ -155,70 +154,28 @@ export const addDebugTag = (label: string, id = label) => <T>(
   const childRefs = new Set<string>();
   childRefs.add(id);
 
-  let warningShown = false;
-  const result = source.pipe(
-    mapWithoutChildRef(v => {
-      const { value, valueRefs } = valueIsWrapped(v)
-        ? {
-            value: v.value,
-            valueRefs: v[Refs],
-          }
-        : {
-            value: v,
-            valueRefs: undefined,
-          };
+  const result: Observable<T> = source;
+  (result as any).isDebugTag = true;
 
-      if (valueRefs) {
-        valueRefs.forEach(ref =>
-          tagRefDetection$.next({
-            id,
-            ref,
-          })
-        );
-      }
+  return defer(() => {
+    const sid = uuid();
 
-      if (!(source as any)[Patched]) {
-        if (!warningShown)
-          console.warn(
-            'rxjs-debugger: You are using `addDebugTag("' +
-              label +
-              '")` operator without calling `patchObservable` first'
-          );
-        warningShown = true;
-        return value;
-      }
-      return {
-        value,
-        [Refs]: childRefs,
-      };
-    })
-  ) as any;
-  result.isDebugTag = true;
-  return (result as Observable<T>).pipe(
-    source =>
-      new Observable<T>(obs => {
-        const sid = uuid();
+    tagSubscription$.next({
+      id,
+      sid,
+    });
 
-        tagSubscription$.next({
+    return result.pipe(
+      tap(value => {
+        tagValueChange$.next({
           id,
           sid,
+          value,
         });
-
-        const sub = source
-          .pipe(
-            tap(value => {
-              tagValueChange$.next({
-                id,
-                sid,
-                value,
-              });
-            })
-          )
-          .subscribe(obs);
-        return () => {
-          tagUnsubscription$.next({ id, sid });
-          sub.unsubscribe();
-        };
+      }),
+      finalize(() => {
+        tagUnsubscription$.next({ id, sid });
       })
-  );
+    );
+  });
 };
