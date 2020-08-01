@@ -126,10 +126,139 @@ const incremental = () => <T>(source: Observable<T[]>) =>
 
 export const slice$ = new BehaviorSubject<number | null>(null)
 
+interface Snapshot {
+  tags: Array<{ id: string; label: string }>
+  refs: Array<{ id: string; ref: string }>
+  subscriptions: Array<{ id: string; sid: string; value: any }>
+}
+const snapshotCache: Array<Snapshot> = []
+const SNAPSHOT_EVERY = 500
+
+const getSnapshot = (history: ActionHistory, index: number): Snapshot => {
+  if (snapshotCache[index]) {
+    return snapshotCache[index]
+  }
+  const previousSnapshot: Snapshot =
+    index > 0
+      ? getSnapshot(history, index - 1)
+      : {
+          tags: [],
+          refs: [],
+          subscriptions: [],
+        }
+
+  const tags = [...previousSnapshot.tags]
+  const refs = [...previousSnapshot.refs]
+  const subscriptions: Map<string, Map<string, any>> = new Map()
+  const initSubscriptions = (id: string) => {
+    if (!subscriptions.has(id)) {
+      subscriptions.set(id, new Map())
+    }
+  }
+  previousSnapshot.subscriptions.forEach(({ id, sid, value }) => {
+    initSubscriptions(id)
+    subscriptions.get(id)!.set(sid, value)
+  })
+
+  for (let i = 0; i < SNAPSHOT_EVERY; i++) {
+    const action = history[SNAPSHOT_EVERY * index + i]
+    switch (action.type) {
+      case "newTag$":
+        if (!tags.find((tag) => tag.id === action.payload.id)) {
+          tags.push(action.payload)
+        }
+        break
+      case "tagRefDetection$":
+        refs.push(action.payload)
+        break
+      case "tagSubscription$":
+        initSubscriptions(action.payload.id)
+        subscriptions.get(action.payload.id)!.set(action.payload.sid, undefined)
+        break
+      case "tagUnsubscription$":
+        initSubscriptions(action.payload.id)
+        subscriptions.get(action.payload.id)!.delete(action.payload.sid)
+        if (subscriptions.get(action.payload.id)!.size === 0) {
+          subscriptions.delete(action.payload.id)
+        }
+        break
+      case "tagValueChange$":
+        initSubscriptions(action.payload.id)
+        subscriptions
+          .get(action.payload.id)!
+          .set(action.payload.sid, action.payload.value)
+        break
+    }
+  }
+
+  const result: Snapshot = {
+    tags,
+    refs,
+    subscriptions: Array.from(subscriptions.entries()).flatMap(([id, subs]) =>
+      Array.from(subs.entries()).map(([sid, value]) => ({
+        id,
+        sid,
+        value,
+      })),
+    ),
+  }
+  snapshotCache[index] = result
+  return result
+}
+const getHistorySlice = (history: ActionHistory, index: number | null) => {
+  snapshotCache.length = Math.min(
+    snapshotCache.length,
+    Math.floor(history.length / SNAPSHOT_EVERY),
+  )
+
+  if (index === null || index > history.length) {
+    index = history.length
+  }
+
+  const snapshotIdx = Math.floor(index / SNAPSHOT_EVERY) - 1
+  if (snapshotIdx === -1) {
+    return index === history.length ? history : history.slice(0, index)
+  }
+  const snapshot = getSnapshot(history, snapshotIdx)
+  const snapshotHistory: ActionHistory = [
+    ...snapshot.tags.map<Action>(({ id, label }) => ({
+      type: "newTag$",
+      payload: {
+        id,
+        label,
+      },
+    })),
+    ...snapshot.refs.map<Action>(({ id, ref }) => ({
+      type: "tagRefDetection$",
+      payload: {
+        id,
+        ref,
+      },
+    })),
+    ...snapshot.subscriptions.map<Action>(({ id, sid }) => ({
+      type: "tagSubscription$",
+      payload: {
+        id,
+        sid,
+      },
+    })),
+    ...snapshot.subscriptions.map<Action>(({ id, sid, value }) => ({
+      type: "tagValueChange$",
+      payload: {
+        id,
+        sid,
+        value,
+      },
+    })),
+  ]
+  return [
+    ...snapshotHistory,
+    ...history.slice((snapshotIdx + 1) * SNAPSHOT_EVERY, index),
+  ]
+}
+
 export const incrementalHistory$ = combineLatest(actionHistory$, slice$).pipe(
-  map(([history, index]) =>
-    index === null ? history : history.slice(0, index),
-  ),
+  map(([history, index]) => getHistorySlice(history, index)),
   incremental(),
 )
 
