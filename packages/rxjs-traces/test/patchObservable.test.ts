@@ -1,4 +1,4 @@
-import { concat, Observable, of, interval, merge } from 'rxjs';
+import { concat, Observable, of, interval, merge, timer } from 'rxjs';
 import { marbles } from 'rxjs-marbles/jest';
 import {
   concatMap,
@@ -10,9 +10,10 @@ import {
   takeLast,
   withLatestFrom,
   take,
+  tap,
 } from 'rxjs/operators';
 import { addDebugTag, patchObservable, tagValue$ } from '../src';
-import { resetTag$ } from '../src/debugTag';
+import { resetTag$ } from '../src/changes';
 import { restoreObservable } from '../src/patchObservable';
 import { shareLatest } from '@react-rxjs/core';
 
@@ -100,6 +101,14 @@ describe('patchObservable', () => {
       const tags = await stream
         .pipe(
           takeLast(1),
+          /**
+           * With the current implementation, refs are detected after
+           * `subscribe` call is finished. As `of` is synchrnous, we'll get
+           * "complete" before the ref has been emitted.
+           * We only care that the ref needs to be there, not that it should be
+           * synchronous, so we delay the result to the next event loop tick.
+           */
+          delay(0),
           withLatestFrom(tagValue$),
           map(([_, tags]) => tags)
         )
@@ -111,7 +120,6 @@ describe('patchObservable', () => {
     });
 
     it('references only the parent with custom operator followed by standard operator', async () => {
-      // Honestly... no idea of what's happening
       const stream = of(1).pipe(
         addDebugTag('source'),
         source => new Observable(obs => source.subscribe(obs)),
@@ -123,6 +131,7 @@ describe('patchObservable', () => {
       const tags = (await stream
         .pipe(
           takeLast(1),
+          delay(0),
           withLatestFrom(tagValue$),
           map(([_, tags]) => tags)
         )
@@ -142,6 +151,7 @@ describe('patchObservable', () => {
       const tags = await stream
         .pipe(
           takeLast(1),
+          delay(0),
           withLatestFrom(tagValue$),
           map(([_, tags]) => tags)
         )
@@ -157,9 +167,11 @@ describe('patchObservable', () => {
         source => new Observable(obs => source.subscribe(obs)),
         addDebugTag('result')
       );
+
       const tags = await stream
         .pipe(
           takeLast(1),
+          delay(0),
           withLatestFrom(tagValue$),
           map(([_, tags]) => tags)
         )
@@ -171,7 +183,9 @@ describe('patchObservable', () => {
 
     it('detects references from async operators', async () => {
       const stream = of(1).pipe(
-        switchMap(v => of(v).pipe(delay(10), addDebugTag('source'))),
+        delay(0),
+        addDebugTag('source'),
+        switchMap(v => of(v).pipe(delay(10), addDebugTag('inner'))),
         addDebugTag('result')
       );
       const tags = await stream
@@ -182,8 +196,9 @@ describe('patchObservable', () => {
         )
         .toPromise();
 
-      expect(tags.result.refs).toEqual(['source']);
+      expect(tags.result.refs).toEqual(['source', 'inner']);
       expect(tags.source.refs).toEqual([]);
+      expect(tags.inner.refs).toEqual([]);
     });
 
     it('detects references from argument streams', async () => {
@@ -198,16 +213,23 @@ describe('patchObservable', () => {
       const tags = await stream
         .pipe(
           takeLast(1),
+          delay(0),
           withLatestFrom(tagValue$),
           map(([_, tags]) => tags)
         )
         .toPromise();
 
-      expect(tags.result.refs).toEqual(['source1', 'source2']);
+      expect(tags.result.refs.length).toBe(2);
+      expect(tags.result.refs).toContain('source1');
+      expect(tags.result.refs).toContain('source2');
       expect(tags.source1.refs).toEqual([]);
       expect(tags.source2.refs).toEqual([]);
     });
 
+    /** It fails because current implementation uses synchronous subscriptions
+     * to link streams toghether, and concat won't subscribe to the next
+     * observable until the first hasn't completed
+     */
     it('detects references from creation operators', async () => {
       const createSource = (id: number) =>
         of(id).pipe(delay(10), addDebugTag('source' + id));
@@ -219,6 +241,7 @@ describe('patchObservable', () => {
       const tags = await stream
         .pipe(
           takeLast(1),
+          delay(0),
           withLatestFrom(tagValue$),
           map(([_, tags]) => tags)
         )

@@ -2,13 +2,13 @@ import { initDevtools } from './devtools';
 
 initDevtools();
 
+export { addDebugTag } from './debugTag';
 export {
-  addDebugTag,
   DebugTag,
   newTag$,
   tagRefDetection$,
   tagValue$,
   tagValueChange$,
-} from './debugTag';
+} from './changes';
 export { patchObservable } from './patchObservable';
 export { patchOperator } from './patchOperator';
