@@ -1,5 +1,5 @@
-import { merge, Subscription } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { merge, Observable, Observer, Subscription } from 'rxjs';
+import { finalize, map, share } from 'rxjs/operators';
 import {
   newTag$,
   tagRefDetection$,
@@ -8,6 +8,40 @@ import {
   tagValueChange$,
 } from './changes';
 
+const eventHistory$ = publishReplayOnce(
+  merge(
+    newTag$.pipe(
+      map(payload => ({
+        type: 'new-tag',
+        payload,
+      }))
+    ),
+    tagSubscription$.pipe(
+      map(payload => ({
+        type: 'tag-subscription',
+        payload,
+      }))
+    ),
+    tagUnsubscription$.pipe(
+      map(payload => ({
+        type: 'tag-unsubscription',
+        payload,
+      }))
+    ),
+    tagValueChange$.pipe(
+      map(payload => ({
+        type: 'tag-value-change',
+        payload,
+      }))
+    ),
+    tagRefDetection$.pipe(
+      map(payload => ({
+        type: 'tag-ref-detection',
+        payload,
+      }))
+    )
+  )
+);
 let extensionSubscription: Subscription | null = null;
 window.addEventListener('message', (event: MessageEvent) => {
   const { data, origin } = event;
@@ -24,38 +58,7 @@ window.addEventListener('message', (event: MessageEvent) => {
     if (extensionSubscription) {
       extensionSubscription.unsubscribe();
     }
-    extensionSubscription = merge(
-      newTag$.pipe(
-        map(payload => ({
-          type: 'new-tag',
-          payload,
-        }))
-      ),
-      tagSubscription$.pipe(
-        map(payload => ({
-          type: 'tag-subscription',
-          payload,
-        }))
-      ),
-      tagUnsubscription$.pipe(
-        map(payload => ({
-          type: 'tag-unsubscription',
-          payload,
-        }))
-      ),
-      tagValueChange$.pipe(
-        map(payload => ({
-          type: 'tag-value-change',
-          payload,
-        }))
-      ),
-      tagRefDetection$.pipe(
-        map(payload => ({
-          type: 'tag-ref-detection',
-          payload,
-        }))
-      )
-    ).subscribe(({ type, payload }) => {
+    extensionSubscription = eventHistory$.subscribe(({ type, payload }) => {
       window.postMessage(
         {
           source: 'rxjs-traces',
@@ -69,6 +72,7 @@ window.addEventListener('message', (event: MessageEvent) => {
 });
 
 export function initDevtools() {
+  eventHistory$.connect();
   window.postMessage(
     {
       source: 'rxjs-traces-bridge',
@@ -118,4 +122,44 @@ function prepareForTransmit<T>(
     default:
       return value;
   }
+}
+
+function publishReplayOnce<T>(source: Observable<T>) {
+  const noError = Symbol('nil');
+  let observer: Observer<T> | null = null;
+  const buffer: Array<T> = [];
+  let error: any = noError;
+  let complete = false;
+
+  function connect() {
+    return source.subscribe(
+      value => (observer ? observer.next(value) : buffer.push(value)),
+      err => (observer ? observer.error(err) : (error = err)),
+      () => (observer ? observer.complete() : (complete = true))
+    );
+  }
+
+  const result = new Observable<T>(obs => {
+    buffer.forEach(v => obs.next(v));
+    buffer.length = 0;
+    if (error !== noError) {
+      obs.error(error);
+    } else if (complete) {
+      obs.complete();
+    } else {
+      observer = obs;
+    }
+  }).pipe(
+    finalize(() => {
+      observer = null;
+      buffer.length = 0;
+      error = noError;
+      complete = false;
+    }),
+    share()
+  );
+
+  return Object.assign(result, {
+    connect,
+  });
 }

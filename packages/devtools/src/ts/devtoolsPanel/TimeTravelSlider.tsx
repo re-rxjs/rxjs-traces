@@ -1,23 +1,22 @@
 import { FC, ChangeEvent } from "react"
 import { connectObservable } from "react-rxjs"
-import { historyLength$ } from "./messaging"
+import { historyLength$, slice$ } from "./messaging"
 import React from "react"
 import "./TimeTravelSlider.css"
 
 const [useHistoryLength] = connectObservable(historyLength$)
+const [useSlice] = connectObservable(slice$)
 
-export const TimeTravelSlider: FC<{
-  slice: number | null
-  onSliceChange: (slice: number | null) => void
-}> = ({ slice, onSliceChange }) => {
-  const max = useHistoryLength() - 1
+export const TimeTravelSlider: FC = () => {
+  const slice = useSlice()
+  const max = useHistoryLength()
 
   const handleOnChange = (evt: ChangeEvent<HTMLInputElement>) => {
     const value = Number(evt.target.value)
     if (value === max) {
-      onSliceChange(null)
+      slice$.next(null)
     } else {
-      onSliceChange(value)
+      slice$.next(value)
     }
   }
 

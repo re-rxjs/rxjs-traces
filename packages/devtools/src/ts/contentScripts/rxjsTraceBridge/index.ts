@@ -1,7 +1,6 @@
 const requestMessages = () => {
   chrome.runtime.sendMessage({
-    type: "rxjs-traces",
-    payload: {},
+    type: "reset",
   })
   window.postMessage(
     {

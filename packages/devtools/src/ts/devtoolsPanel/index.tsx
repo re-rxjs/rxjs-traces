@@ -1,16 +1,11 @@
 import * as React from "react"
-import ReactDOM from "react-dom"
-import { connectFactoryObservable } from "react-rxjs"
-import { Visualization } from "./Visualization"
 import { useState } from "react"
-import { TagOverlay } from "./TagOverlay"
+import ReactDOM from "react-dom"
 import { FilterBar } from "./FilterBar"
-import { tagValue$, copy$ } from "./messaging"
+import { copy$ } from "./messaging"
+import { TagOverlay } from "./TagOverlay"
 import { TimeTravelSlider } from "./TimeTravelSlider"
-
-const [useTagValues] = connectFactoryObservable((slice: number | null) =>
-  tagValue$(slice),
-)
+import { Visualization } from "./Visualization"
 
 interface TagSelection {
   id: string
@@ -19,8 +14,6 @@ interface TagSelection {
 }
 const App = () => {
   const [selectedTag, setSelectedTag] = useState<TagSelection | null>(null)
-  const [slice, setSlice] = useState<null | number>(null)
-  const tags = useTagValues(slice)
   const [filter, setFilter] = useState("")
 
   return (
@@ -28,19 +21,18 @@ const App = () => {
       <FilterBar filter={filter} onFilterChange={setFilter} />
       <Visualization
         filter={filter}
-        tags={tags}
         onSelectNode={(id, x, y) => setSelectedTag({ id, x, y })}
         onDeselectNode={() => setSelectedTag(null)}
       />
       {selectedTag && (
         <TagOverlay
-          tag={tags[selectedTag.id]}
+          id={selectedTag.id}
           initialX={selectedTag.x}
           initialY={selectedTag.y}
           onCopy={value => copy$.next(value)}
         />
       )}
-      <TimeTravelSlider slice={slice} onSliceChange={setSlice} />
+      <TimeTravelSlider />
     </>
   )
 }
