@@ -10,7 +10,7 @@ import {
   ignoreElements,
 } from 'rxjs/operators';
 import { addDebugTag, patchObservable } from '../src';
-import { resetTag$, tagValue$ } from '../src/debugTag';
+import { resetTag$, tagValue$ } from '../src/changes';
 import { restoreObservable } from '../src/patchObservable';
 import { eachValueFrom } from 'rxjs-for-await';
 

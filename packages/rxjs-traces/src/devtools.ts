@@ -6,7 +6,7 @@ import {
   tagSubscription$,
   tagUnsubscription$,
   tagValueChange$,
-} from './debugTag';
+} from './changes';
 
 let extensionSubscription: Subscription | null = null;
 window.addEventListener('message', (event: MessageEvent) => {
