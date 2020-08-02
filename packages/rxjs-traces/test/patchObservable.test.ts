@@ -1,4 +1,4 @@
-import { concat, Observable, of, interval, merge, timer } from 'rxjs';
+import { concat, Observable, of, interval, merge, timer, from } from 'rxjs';
 import { marbles } from 'rxjs-marbles/jest';
 import {
   concatMap,
@@ -11,6 +11,9 @@ import {
   withLatestFrom,
   take,
   tap,
+  share,
+  timeout,
+  catchError,
 } from 'rxjs/operators';
 import { addDebugTag, patchObservable, tagValue$ } from '../src';
 import { resetTag$ } from '../src/changes';
@@ -32,7 +35,7 @@ describe('patchObservable', () => {
   describe('keeps the Observable API unchanged', () => {
     it(
       `emits regular values on subscribe`,
-      marbles(m => {
+      marbles((m) => {
         const source = m.cold('a-b-c-|');
         const expected = '     a-b-c-|';
 
@@ -42,13 +45,13 @@ describe('patchObservable', () => {
 
     it(
       'emits regular values with pipes and standard operators',
-      marbles(m => {
+      marbles((m) => {
         const source = m.cold<string>('a-b-c-|');
         const expected = '             ---m--n--(o|)';
         const delayTime = m.time('     ---|');
 
         const stream = source.pipe(
-          map(char => char.charCodeAt(0)),
+          map((char) => char.charCodeAt(0)),
           scan((r1, r2) => r1 + r2),
           concatMap((v, i) => of(v / (i + 1)).pipe(delay(delayTime)))
         );
@@ -63,13 +66,13 @@ describe('patchObservable', () => {
 
     it(
       'emits regular values when used with addDebugTag',
-      marbles(m => {
+      marbles((m) => {
         const source = m.cold<string>('a-b-c-|');
         const expected = '             0-1-2-|';
 
         const stream = source.pipe(
           addDebugTag('debug'),
-          map(char => String(char.charCodeAt(0) - 'a'.charCodeAt(0)))
+          map((char) => String(char.charCodeAt(0) - 'a'.charCodeAt(0)))
         );
 
         m.expect(stream).toBeObservable(expected);
@@ -78,7 +81,7 @@ describe('patchObservable', () => {
 
     it(
       `doesn't break when using connectable observables`,
-      marbles(m => {
+      marbles((m) => {
         const source = m.cold<string>('-a-b-c-|');
         const expected = '             -a-b-c-|)';
 
@@ -87,6 +90,38 @@ describe('patchObservable', () => {
 
         m.expect(stream).toBeObservable(expected);
         m.expect(stream).toBeObservable(expected);
+      })
+    );
+
+    it(
+      `doesn't break synchronous share`,
+      marbles((m) => {
+        const source = from(['a', 'b', 'c']);
+        const expected = '(abc|)';
+        const stream = source.pipe(share());
+
+        m.expect(stream).toBeObservable(expected);
+      })
+    );
+
+    it(
+      `propagates unsubscriptions through share`,
+      marbles((m) => {
+        const source = m.cold('-------|');
+        const subs = '         ^---!';
+        const time = m.time('  ----|');
+        const expected = '     ----#';
+
+        const stream = source.pipe(
+          share(),
+          timeout(time),
+          catchError(() => {
+            throw 'error';
+          })
+        );
+
+        m.expect(stream).toBeObservable(expected);
+        m.expect(source).toHaveSubscriptions(subs);
       })
     );
   });
@@ -122,8 +157,8 @@ describe('patchObservable', () => {
     it('references only the parent with custom operator followed by standard operator', async () => {
       const stream = of(1).pipe(
         addDebugTag('source'),
-        source => new Observable(obs => source.subscribe(obs)),
-        map(v => 0),
+        (source) => new Observable((obs) => source.subscribe(obs)),
+        map((v) => 0),
         addDebugTag('middle'),
         addDebugTag('result')
       );
@@ -145,7 +180,7 @@ describe('patchObservable', () => {
     it('detects references across standard operators', async () => {
       const stream = of(1).pipe(
         addDebugTag('source'),
-        map(value => value + 2),
+        map((value) => value + 2),
         addDebugTag('result')
       );
       const tags = await stream
@@ -164,7 +199,7 @@ describe('patchObservable', () => {
     it('detects references across custom simple operators', async () => {
       const stream = of(1).pipe(
         addDebugTag('source'),
-        source => new Observable(obs => source.subscribe(obs)),
+        (source) => new Observable((obs) => source.subscribe(obs)),
         addDebugTag('result')
       );
 
@@ -185,7 +220,7 @@ describe('patchObservable', () => {
       const stream = of(1).pipe(
         delay(0),
         addDebugTag('source'),
-        switchMap(v => of(v).pipe(delay(10), addDebugTag('inner'))),
+        switchMap((v) => of(v).pipe(delay(10), addDebugTag('inner'))),
         addDebugTag('result')
       );
       const tags = await stream
