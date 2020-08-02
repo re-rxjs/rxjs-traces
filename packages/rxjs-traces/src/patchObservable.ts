@@ -7,7 +7,7 @@ import {
   Subscription,
   TeardownLogic,
 } from 'rxjs';
-import { detectRefChanges, getMetadata } from './metadata';
+import { detectRefChanges, findReverseTagRefs, getMetadata } from './metadata';
 
 const Patched = Symbol('patched');
 export const isPatched = (ObservableCtor: Function) =>
@@ -98,11 +98,55 @@ export function patchObservable(ObservableCtor: typeof Observable) {
       const top = observableStack[observableStack.length - 1];
       top.forEach((observable) => {
         getMetadata(observable).refs.add(this);
+        metadata.reverseRefs.add(observable);
       });
     }
 
+    const overridenObserver: Observer<T> = {
+      ...observer,
+      complete: () => {
+        /** Case concat: When a source completes, it synchronously causes
+         * a subscription to fire of. So we set the child of `this` to be the
+         * top of the observable stack, (`this` is the inner
+         * observable, and we want its child, the one that `concat` returns)
+         */
+        if (metadata.reverseRefs.size) {
+          const reverseRefValues = Array.from(metadata.reverseRefs.values());
+          const dependantTagRefs = reverseRefValues.flatMap((ref) =>
+            findReverseTagRefs(ref)
+          );
+          detectRefChanges(() => {
+            observableStack.push(reverseRefValues);
+            observer.complete();
+            observableStack.pop();
+          }, dependantTagRefs);
+        } else {
+          observer.complete();
+        }
+      },
+      next: (value) => {
+        /** Case switchMap: When the source emits, it synchronously causes a new
+         * subscription to fire of. In this case `this` is the parent stream
+         * of `switchMap`, so we also need to grab its child.
+         */
+        if (metadata.reverseRefs.size) {
+          const reverseRefValues = Array.from(metadata.reverseRefs.values());
+          const dependantTagRefs = reverseRefValues.flatMap((ref) =>
+            findReverseTagRefs(ref)
+          );
+          detectRefChanges(() => {
+            observableStack.push(reverseRefValues);
+            observer.next(value);
+            observableStack.pop();
+          }, dependantTagRefs);
+        } else {
+          observer.next(value);
+        }
+      },
+    };
+
     metadata.patched = true;
-    return callOriginalSubscribe(overridenThis, observer);
+    return callOriginalSubscribe(overridenThis, overridenObserver);
   };
   (ObservableCtor as any)[Patched] = true;
 }

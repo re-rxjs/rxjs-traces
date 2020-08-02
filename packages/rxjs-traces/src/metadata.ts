@@ -6,6 +6,9 @@ interface ObservableMetadata {
   patched: boolean;
   tag: string | null;
   refs: Set<Observable<unknown>>;
+
+  // Advanced stuff for concatMap
+  reverseRefs: Set<Observable<unknown>>; // Useful for tracking the ones that depend on it
 }
 export const hasMetadata = (observable: Observable<unknown>) =>
   Metadata in observable;
@@ -19,6 +22,7 @@ export const getMetadata = (
       patched: false,
       tag: null,
       refs: new Set(),
+      reverseRefs: new Set(),
     };
     (observable as any)[Metadata] = defaultMetadata;
   }
@@ -68,4 +72,21 @@ export function findTagRefs(observable: Observable<unknown>) {
   });
 
   return Array.from(tags.values());
+}
+
+export function findReverseTagRefs(observable: Observable<unknown>) {
+  const metadata = getMetadata(observable);
+
+  const refs = new Set<Observable<unknown>>();
+  metadata.reverseRefs.forEach((ref) => {
+    const refMetadata = getMetadata(ref);
+    if (refMetadata.tag) {
+      refs.add(ref);
+    } else {
+      const tagRefs = findReverseTagRefs(ref);
+      tagRefs.forEach((ref) => refs.add(ref));
+    }
+  });
+
+  return Array.from(refs.values());
 }
