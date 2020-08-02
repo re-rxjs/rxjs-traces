@@ -1,43 +1,15 @@
-import React, { useEffect, useRef, FC } from "react"
-import {
-  DataSet,
-  Network,
-  NodeOptions,
-  EdgeOptions,
-} from "vis-network/standalone"
-import type { DebugTag } from "rxjs-traces"
+import React, { FC, useEffect, useRef } from "react"
+import { Network } from "vis-network/standalone"
 import "./Visualization.css"
-
-interface Node extends NodeOptions {
-  id: string
-}
-interface Edge extends EdgeOptions {
-  id: string
-  from: string
-  to: string
-}
-
-const nodeColors = {
-  filterHit: {
-    active: "#fc9797",
-    inactive: "#fccaca",
-  },
-  filterMiss: {
-    active: "#97c2fc",
-    inactive: "#cadffc",
-  },
-}
+import { edges, nodes, filter$ } from "./visualizationState"
 
 const noop = () => void 0
 export const Visualization: FC<{
-  tags: Record<string, DebugTag>
   filter: string
   onSelectNode?: (id: string, x: number, y: number) => void
   onDeselectNode?: (id: string) => void
-}> = ({ tags, filter, onSelectNode = noop, onDeselectNode = noop }) => {
+}> = ({ filter, onSelectNode = noop, onDeselectNode = noop }) => {
   const container = useRef<HTMLDivElement | null>(null)
-  const nodes = useRef<DataSet<Node>>(new DataSet())
-  const edges = useRef<DataSet<Edge>>(new DataSet())
   const network = useRef<Network | null>(null)
 
   const handleSelectEvent = (event: EdgeSelectEvent) => {
@@ -53,8 +25,8 @@ export const Visualization: FC<{
     network.current = new Network(
       container.current!,
       {
-        nodes: nodes.current,
-        edges: edges.current,
+        nodes,
+        edges,
       },
       {
         height: height + "px",
@@ -75,74 +47,10 @@ export const Visualization: FC<{
   }, [handleSelectEvent, handleDeselectEvent])
 
   useEffect(() => {
-    const currentNodeIds = nodes.current.getIds()
-    const allTags = Object.values(tags)
-    const nodeUpdates: Node[] = []
-    const newNodes: Node[] = []
-    const nodesToRemove: string[] = []
-    allTags.forEach(tag => {
-      const activeSubscriptions = Object.keys(tag.latestValues).length
+    filter$.next(filter)
+  }, [filter])
 
-      const isActive = activeSubscriptions > 0
-      const filterHit =
-        filter &&
-        tag.label.toLocaleLowerCase().includes(filter.toLocaleLowerCase())
-      const node: Node = {
-        id: tag.id,
-        label: tag.label,
-        color:
-          nodeColors[filterHit ? "filterHit" : "filterMiss"][
-            isActive ? "active" : "inactive"
-          ],
-      }
-      if (currentNodeIds.includes(tag.id)) {
-        nodeUpdates.push(node)
-      } else {
-        newNodes.push(node)
-      }
-    })
-    nodes.current.forEach(({ id }) => {
-      if (!allTags.some(tag => tag.id === id)) {
-        nodesToRemove.push(id)
-      }
-    })
-    if (nodeUpdates.length) nodes.current.update(nodeUpdates)
-    if (newNodes.length) nodes.current.add(newNodes)
-    if (nodesToRemove.length) nodes.current.remove(nodesToRemove)
-
-    const edgeIds = edges.current.getIds()
-    const newEdges: Edge[] = []
-    const edgesToRemove = new Set<string>()
-    allTags.forEach(tag => {
-      const refs = Array.from(tag.refs)
-      refs.forEach(ref => {
-        const edge: Edge = {
-          id: tag.id + "->" + ref,
-          from: tag.id,
-          to: ref,
-          arrows: "from",
-        }
-        if (!edgeIds.includes(edge.id)) {
-          newEdges.push(edge)
-        }
-      })
-    })
-    nodesToRemove.forEach(id => {
-      edges.current.forEach(edge => {
-        if (edge.from === id || edge.to === id) {
-          edgesToRemove.add(id)
-        }
-      })
-    })
-    if (newEdges.length) edges.current.add(newEdges)
-    if (edgesToRemove.size) edges.current.remove(Array.from(edgesToRemove))
-  })
-
-  return (
-    <div ref={container} className="visualization">
-      Container
-    </div>
-  )
+  return <div ref={container} className="visualization"></div>
 }
 
 interface EdgeSelectEvent {

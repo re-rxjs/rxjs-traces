@@ -1,13 +1,17 @@
 import React, { FC, RefObject, useEffect, useRef, useState } from "react"
-import { DebugTag } from "rxjs-traces"
 import "./TagOverlay.css"
+import { connectFactoryObservable } from "react-rxjs"
+import { latestTagValue$ } from "./messaging"
+
+const [useTag] = connectFactoryObservable(latestTagValue$)
 
 export const TagOverlay: FC<{
-  tag: DebugTag
+  id: string
   initialX: number
   initialY: number
   onCopy?: (value: string) => void
-}> = ({ tag, initialX, initialY, onCopy }) => {
+}> = ({ id, initialX, initialY, onCopy }) => {
+  const tag = useTag(id)
   const ref = useRef<HTMLDivElement | null>(null)
   const drag = useDrag(ref, initialX + 15, initialY)
 
@@ -194,7 +198,6 @@ const useDrag = (
         return
       }
 
-      console.log(lastFrameUpdateMouseEvent)
       ref.current.style.left =
         positionRef.x + lastFrameUpdateMouseEvent.pageX + "px"
       ref.current.style.top =
