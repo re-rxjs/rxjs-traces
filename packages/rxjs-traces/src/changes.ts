@@ -49,7 +49,7 @@ const mergeReducer = <T>(
 ) =>
   merge(
     ...observables.map((obs, index) =>
-      obs.pipe(map(value => ({ index, value })))
+      obs.pipe(map((value) => ({ index, value })))
     )
   ).pipe(
     scan(reducer, initialValue),

@@ -44,7 +44,7 @@ describe('addDebugTag', () => {
 
   it('keeps track of the latest value', async () => {
     const stream = from([1, 2, 3]).pipe(
-      concatMap(v => of(v).pipe(delay(10))),
+      concatMap((v) => of(v).pipe(delay(10))),
       addDebugTag('result')
     );
 
@@ -58,19 +58,19 @@ describe('addDebugTag', () => {
 
   it('keeps the latest value for each subscription', async () => {
     const stream = from([1, 2]).pipe(
-      concatMap(v => of(v).pipe(delay(10))),
+      concatMap((v) => of(v).pipe(delay(10))),
       addDebugTag('result')
     );
 
     const subscriptionStream = from([1, 2]).pipe(
-      concatMap(v => of(v).pipe(delay(5))),
+      concatMap((v) => of(v).pipe(delay(5))),
       mergeMap(() => stream),
       ignoreElements()
     );
 
     const valueIterator = eachValueFrom(
       merge(tagValue$, subscriptionStream).pipe(
-        map(tags => tags.result.latestValues)
+        map((tags) => tags.result.latestValues)
       )
     );
 
@@ -107,13 +107,13 @@ describe('addDebugTag', () => {
 describe('without patching', () => {
   it(
     `doesn't polute the stream when using addDebugTag`,
-    marbles(m => {
+    marbles((m) => {
       const source = m.cold<string>('a-b-c-|');
       const expected = '             0-1-2-|';
 
       const stream = source.pipe(
         addDebugTag('debug'),
-        map(char => String(char.charCodeAt(0) - 'a'.charCodeAt(0)))
+        map((char) => String(char.charCodeAt(0) - 'a'.charCodeAt(0)))
       );
 
       m.expect(stream).toBeObservable(expected);

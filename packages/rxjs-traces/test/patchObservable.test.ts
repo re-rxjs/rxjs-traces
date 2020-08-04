@@ -1,24 +1,23 @@
-import { concat, Observable, of, interval, merge, timer, from } from 'rxjs';
+import { shareLatest } from '@react-rxjs/core';
+import { concat, from, interval, merge, Observable, of } from 'rxjs';
 import { marbles } from 'rxjs-marbles/jest';
 import {
+  catchError,
   concatMap,
   delay,
   map,
   publish,
   scan,
-  switchMap,
-  takeLast,
-  withLatestFrom,
-  take,
-  tap,
   share,
+  switchMap,
+  take,
+  takeLast,
   timeout,
-  catchError,
+  withLatestFrom,
 } from 'rxjs/operators';
 import { addDebugTag, patchObservable, tagValue$ } from '../src';
 import { resetTag$ } from '../src/changes';
 import { restoreObservable } from '../src/patchObservable';
-import { shareLatest } from '@react-rxjs/core';
 
 afterEach(() => {
   resetTag$();
@@ -116,7 +115,7 @@ describe('patchObservable', () => {
           share(),
           timeout(time),
           catchError(() => {
-            throw 'error';
+            throw new Error('error');
           })
         );
 

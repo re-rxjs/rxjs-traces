@@ -11,31 +11,31 @@ import {
 const eventHistory$ = publishReplayOnce(
   merge(
     newTag$.pipe(
-      map(payload => ({
+      map((payload) => ({
         type: 'new-tag',
         payload,
       }))
     ),
     tagSubscription$.pipe(
-      map(payload => ({
+      map((payload) => ({
         type: 'tag-subscription',
         payload,
       }))
     ),
     tagUnsubscription$.pipe(
-      map(payload => ({
+      map((payload) => ({
         type: 'tag-unsubscription',
         payload,
       }))
     ),
     tagValueChange$.pipe(
-      map(payload => ({
+      map((payload) => ({
         type: 'tag-value-change',
         payload,
       }))
     ),
     tagRefDetection$.pipe(
-      map(payload => ({
+      map((payload) => ({
         type: 'tag-ref-detection',
         payload,
       }))
@@ -108,14 +108,14 @@ function prepareForTransmit<T>(
       if (Array.isArray(value)) {
         const result: any[] = [];
         visitedValues.set(value, result);
-        value.forEach(v => result.push(prepareForTransmit(v, visitedValues)));
+        value.forEach((v) => result.push(prepareForTransmit(v, visitedValues)));
         return result;
       }
 
       const result: any = {};
       visitedValues.set(value, result);
       Object.keys(value).forEach(
-        key =>
+        (key) =>
           (result[key] = prepareForTransmit((value as any)[key], visitedValues))
       );
       return result;
@@ -133,14 +133,14 @@ function publishReplayOnce<T>(source: Observable<T>) {
 
   function connect() {
     return source.subscribe(
-      value => (observer ? observer.next(value) : buffer.push(value)),
-      err => (observer ? observer.error(err) : (error = err)),
+      (value) => (observer ? observer.next(value) : buffer.push(value)),
+      (err) => (observer ? observer.error(err) : (error = err)),
       () => (observer ? observer.complete() : (complete = true))
     );
   }
 
-  const result = new Observable<T>(obs => {
-    buffer.forEach(v => obs.next(v));
+  const result = new Observable<T>((obs) => {
+    buffer.forEach((v) => obs.next(v));
     buffer.length = 0;
     if (error !== noError) {
       obs.error(error);

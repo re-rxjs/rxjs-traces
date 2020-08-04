@@ -1,12 +1,5 @@
 import { Observable, of } from 'rxjs';
-import {
-  delay,
-  filter,
-  map,
-  takeLast,
-  withLatestFrom,
-  mergeMap,
-} from 'rxjs/operators';
+import { delay, filter, map, takeLast, withLatestFrom } from 'rxjs/operators';
 import { addDebugTag, patchObservable, patchOperator, tagValue$ } from '../src';
 import { resetTag$ } from '../src/changes';
 import { restoreObservable } from '../src/patchObservable';
