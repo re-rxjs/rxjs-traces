@@ -1,15 +1,22 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "pwa-chrome",
-            "request": "launch",
-            "name": "Launch Chrome against localhost",
-            "url": "http://localhost:8080",
-            "webRoot": "${workspaceFolder}"
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Jest Current File",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": [
+        "${fileBasenameNoExtension}",
+        "--config",
+        "{\"transform\":{\".(ts|tsx)$\":\"<rootDir>/node_modules/ts-jest/dist/index.js\",\".(js|jsx)$\":\"<rootDir>/node_modules/babel-jest/build/index.js\"},\"transformIgnorePatterns\":[\"[///]node_modules[///].+/.(js|jsx)$\"],\"moduleFileExtensions\":[\"ts\",\"tsx\",\"js\",\"jsx\",\"json\",\"node\"],\"collectCoverageFrom\":[\"src/**/*.{ts,tsx,js,jsx}\"],\"testMatch\":[\"<rootDir>/**/*.(spec|test).{ts,tsx,js,jsx}\"],\"testURL\":\"http://localhost\",\"watchPlugins\":[\"<rootDir>/node_modules/jest-watch-typeahead/filename.js\",\"<rootDir>/node_modules/jest-watch-typeahead/testname.js\"],\"globals\":{\"ts-jest\":{\"diagnostics\":false}} }"
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "disableOptimisticBPs": true,
+      "windows": {
+        "program": "${workspaceFolder}/node_modules/jest/bin/jest"
+      }
+    }
+  ]
 }

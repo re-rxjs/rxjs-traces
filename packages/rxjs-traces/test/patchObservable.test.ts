@@ -115,7 +115,7 @@ describe('patchObservable', () => {
           share(),
           timeout(time),
           catchError(() => {
-            throw new Error('error');
+            throw 'error'; // eslint-disable-line no-throw-literal
           })
         );
 
@@ -170,6 +170,28 @@ describe('patchObservable', () => {
           map(([_, tags]) => tags)
         )
         .toPromise()) as any;
+
+      expect(tags.result.refs).toEqual(['middle']);
+      expect(tags.middle.refs).toEqual(['source']);
+      expect(tags.source.refs).toEqual([]);
+    });
+
+    it('references only up to the parent followed by a refcount', async () => {
+      const stream = of(1).pipe(
+        addDebugTag('source'),
+        addDebugTag('middle'),
+        share(),
+        addDebugTag('result')
+      );
+
+      const tags = await stream
+        .pipe(
+          takeLast(1),
+          delay(0),
+          withLatestFrom(tagValue$),
+          map(([_, tags]) => tags)
+        )
+        .toPromise();
 
       expect(tags.result.refs).toEqual(['middle']);
       expect(tags.middle.refs).toEqual(['source']);

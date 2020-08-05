@@ -1,7 +1,6 @@
 import { Observable } from 'rxjs';
 import { tagRefDetection$ } from './changes';
 
-const Metadata = Symbol('metadata');
 interface ObservableMetadata {
   patched: boolean;
   tag: string | null;
@@ -10,23 +9,29 @@ interface ObservableMetadata {
   // Advanced stuff for concatMap
   reverseRefs: Set<Observable<unknown>>; // Useful for tracking the ones that depend on it
 }
-export const hasMetadata = (observable: Observable<unknown>) =>
-  Metadata in observable;
 
+/**
+ * We can't put this info in each Observable instance because `multicast`
+ * creates a copy of the observables when it makes a connectable one, messing up
+ * references.
+ */
+const metadataStore = new WeakMap<Observable<unknown>, ObservableMetadata>();
+
+export const hasMetadata = (observable: Observable<unknown>) =>
+  metadataStore.has(observable);
 export const getMetadata = (
   observable: Observable<unknown>
 ): ObservableMetadata => {
   if (!hasMetadata(observable)) {
     const defaultMetadata: ObservableMetadata = {
-      // id: Math.random(),
       patched: false,
       tag: null,
       refs: new Set(),
       reverseRefs: new Set(),
     };
-    (observable as any)[Metadata] = defaultMetadata;
+    metadataStore.set(observable, defaultMetadata);
   }
-  return (observable as any)[Metadata];
+  return metadataStore.get(observable)!;
 };
 
 export const detectRefChanges = <T>(
