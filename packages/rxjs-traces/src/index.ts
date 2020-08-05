@@ -12,3 +12,4 @@ export {
 } from './changes';
 export { patchObservable } from './patchObservable';
 export { patchOperator } from './patchOperator';
+export { createLink } from './link';
