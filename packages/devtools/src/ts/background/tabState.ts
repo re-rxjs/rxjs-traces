@@ -1,6 +1,14 @@
 import { mergeWithKey } from "@josepot/rxjs-utils"
+import { shareLatest } from "react-rxjs"
 import { Observable, Subject } from "rxjs"
-import { filter, map, scan, share, startWith, switchMap } from "rxjs/operators"
+import {
+  distinctUntilChanged,
+  filter,
+  map,
+  scan,
+  startWith,
+  switchMap,
+} from "rxjs/operators"
 
 export const createTabState = () => {
   const reset$ = new Subject<void>()
@@ -62,12 +70,61 @@ export const createTabState = () => {
     ),
   )
 
-  const action$ = mergeWithKey({
+  const stateAction$ = mergeWithKey({
     newTag$,
+    tagRefDetection$: distinctTagRefDetection$,
+  })
+
+  const tag$ = reset$.pipe(
+    startWith(undefined),
+    switchMap(() =>
+      stateAction$.pipe(
+        scan(
+          (tags, action) => {
+            const { id } = action.payload
+            if (action.type === "newTag$") {
+              return id in tags
+                ? tags
+                : {
+                    ...tags,
+                    [id]: {
+                      ...action.payload,
+                      refs: [],
+                    },
+                  }
+            }
+            const { ref } = action.payload
+            if (!(id in tags) || tags[id].refs.includes(ref)) {
+              return tags
+            }
+            return {
+              ...tags,
+              [id]: {
+                ...tags[id],
+                refs: [...tags[id].refs, ref],
+              },
+            }
+          },
+          {} as Record<
+            string,
+            {
+              id: string
+              label: string
+              refs: string[]
+            }
+          >,
+        ),
+        distinctUntilChanged(),
+      ),
+    ),
+    shareLatest(),
+  )
+  tag$.subscribe()
+
+  const action$ = mergeWithKey({
     tagSubscription$,
     tagUnsubscription$,
     tagValueChange$,
-    tagRefDetection$: distinctTagRefDetection$,
   })
 
   const actionHistory$ = reset$.pipe(
@@ -80,7 +137,7 @@ export const createTabState = () => {
         ),
       ),
     ),
-    share(),
+    shareLatest(),
   )
   const subscription = actionHistory$.subscribe()
 
@@ -91,6 +148,7 @@ export const createTabState = () => {
     tagUnsubscription$,
     tagValueChange$,
     tagRefDetection$,
+    tag$,
     actionHistory$,
     dispose: () => subscription.unsubscribe(),
   }
@@ -102,4 +160,8 @@ type ObservableValue<T extends Observable<any>> = T extends Observable<infer R>
 
 export type ActionHistory = ObservableValue<
   ReturnType<typeof createTabState>["actionHistory$"]
+>
+
+export type TagState = ObservableValue<
+  ReturnType<typeof createTabState>["tag$"]
 >

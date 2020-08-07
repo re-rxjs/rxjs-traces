@@ -1,7 +1,16 @@
 import { BehaviorSubject, Subject } from "rxjs"
-import { combineLatest, debounceTime, filter, map, share } from "rxjs/operators"
+import {
+  combineLatest,
+  debounceTime,
+  filter,
+  share,
+  take,
+  takeUntil,
+  distinctUntilChanged,
+  finalize,
+} from "rxjs/operators"
 import { DataSet, EdgeOptions, NodeOptions } from "vis-network/standalone"
-import { incrementalHistory$ } from "./messaging"
+import { incrementalHistory$, tagState$ } from "./messaging"
 
 export const filter$ = new BehaviorSubject("")
 
@@ -25,17 +34,20 @@ const createNodeWatch = (id: string, label: string) => {
   }
   activeNodeWatches.add(id)
 
+  const tagRemoved$ = tagState$.pipe(
+    filter((v) => !(id in v)),
+    take(1),
+  )
+
   const nodeChange$ = new Subject<Node | null>()
 
   const activeSubscriptions = new Set<string>()
-  let isActive = false
-  const historySubscription = sharedIncrementalHistory$
-    .pipe(combineLatest(filter$))
+  sharedIncrementalHistory$
+    .pipe(takeUntil(tagRemoved$), combineLatest(filter$))
     .subscribe(([action, filter]) => {
       if (action.type === "reset") {
         nodeChange$.next(null)
         activeSubscriptions.clear()
-        isActive = false
         return
       }
 
@@ -50,7 +62,10 @@ const createNodeWatch = (id: string, label: string) => {
           ? nodeColors.default
           : nodeColors.filterMiss
 
-      if (historyAction.payload.id === id) {
+      const actionIsTarget = historyAction.payload.id === id
+      const hadSubscriptions = activeSubscriptions.size > 0
+
+      if (actionIsTarget) {
         switch (historyAction.type) {
           case "tagValueChange$":
           case "tagSubscription$":
@@ -58,87 +73,59 @@ const createNodeWatch = (id: string, label: string) => {
             break
           case "tagUnsubscription$":
             activeSubscriptions.delete(historyAction.payload.sid)
+            break
         }
       }
-      if (
-        historyAction.payload.id === id ||
-        (historyAction.type === "tagRefDetection$" &&
-          historyAction.payload.ref === id)
-      ) {
-        isActive = true
-      }
 
-      if (isActive) {
+      const hasSubscriptions = activeSubscriptions.size > 0
+
+      if (hasSubscriptions || hadSubscriptions) {
         nodeChange$.next({
           id,
           label,
           color: targetColor,
           opacity: activeSubscriptions.size === 0 ? 0.5 : 1,
         })
+      } else {
+        nodeChange$.next(null)
       }
     })
 
-  const changeSubscription = nodeChange$
-    .pipe(debounceTime(0))
+  // TODO nodeChanges can't be just a stream?
+  nodeChange$
+    .pipe(
+      takeUntil(tagRemoved$),
+      debounceTime(0),
+      distinctUntilChanged(),
+      finalize(() => {
+        nodes.remove(id)
+        activeNodeWatches.delete(id)
+      }),
+    )
     .subscribe((node) => {
       const nodeExists = nodes.get(id)
       if (!node) {
         if (nodeExists) {
           nodes.remove(id)
         }
-        historySubscription.unsubscribe()
-        changeSubscription.unsubscribe()
-        activeNodeWatches.delete(id)
         return
       }
 
-      if (activeSubscriptions.size > 0) {
-        if (!nodeExists) {
-          nodes.add(node)
-        } else {
-          nodes.update(node)
-        }
-      } else if (nodeExists) {
-        nodes.remove(id)
+      if (!nodeExists) {
+        nodes.add(node)
+      } else {
+        nodes.update(node)
       }
     })
 }
 
-sharedIncrementalHistory$
-  .pipe(
-    filter((action) => action.type === "incremental"),
-    map((action) => (action.type === "reset" ? null! : action.payload)),
-    filter(({ type }) => type === "newTag$"),
-  )
-  .subscribe((newTag) => {
-    if (newTag.type !== "newTag$") {
-      return
-    }
-    createNodeWatch(newTag.payload.id, newTag.payload.label)
+tagState$.subscribe((tags) => {
+  const tagKeys = Object.keys(tags)
+  tagKeys.forEach((id) => {
+    if (activeNodeWatches.has(id)) return
+    createNodeWatch(id, tags[id].label)
   })
-
-const edgeQtyChanges = sharedIncrementalHistory$.pipe(
-  filter((action) => {
-    if (action.type === "reset") {
-      return true
-    }
-    const { type } = action.payload
-    const interestingTypes: typeof type[] = ["tagRefDetection$"]
-    return interestingTypes.includes(type)
-  }),
-  map((action) => {
-    if (action.type === "reset" || action.payload.type !== "tagRefDetection$") {
-      return {
-        type: "remove-all" as const,
-      }
-    }
-    return {
-      type: "add" as const,
-      from: action.payload.payload.id,
-      to: action.payload.payload.ref,
-    }
-  }),
-)
+})
 
 export interface Edge extends EdgeOptions {
   id: string
@@ -147,19 +134,23 @@ export interface Edge extends EdgeOptions {
 }
 export const edges = new DataSet<Edge>()
 
-edgeQtyChanges.subscribe((action) => {
-  switch (action.type) {
-    case "add":
-      const { from, to } = action
+tagState$.subscribe((tags) => {
+  if (Object.keys(tags).length <= 1) {
+    edges.clear()
+  }
+
+  const existingIds = edges.getIds()
+  Object.values(tags).forEach((tag) => {
+    const from = tag.id
+    tag.refs.forEach((to) => {
+      const id = `${from}->${to}`
+      if (existingIds.includes(id)) return
       edges.add({
         id: `${from}->${to}`,
         from,
         to,
         arrows: "from",
       })
-      return
-    case "remove-all":
-      edges.clear()
-      return
-  }
+    })
+  })
 })

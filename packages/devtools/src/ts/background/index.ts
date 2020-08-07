@@ -1,6 +1,6 @@
-import { createTabState, ActionHistory } from "./tabState"
+import { createTabState, ActionHistory, TagState } from "./tabState"
 
-export type { ActionHistory }
+export type { ActionHistory, TagState }
 
 const tabStates = {} as Record<string, ReturnType<typeof createTabState>>
 
@@ -36,7 +36,12 @@ chrome.runtime.onConnect.addListener(function (devToolsConnection) {
     tabStates[toolsTabId] = createTabState()
   }
 
-  const subscription = tabStates[toolsTabId].actionHistory$.subscribe(
+  const tagsSub = tabStates[toolsTabId].tag$.subscribe((value) =>
+    devToolsConnection.postMessage({
+      tags: value,
+    }),
+  )
+  const actionHistorySub = tabStates[toolsTabId].actionHistory$.subscribe(
     (value: ActionHistory) =>
       devToolsConnection.postMessage({
         actionHistory: value,
@@ -62,6 +67,7 @@ chrome.runtime.onConnect.addListener(function (devToolsConnection) {
   })
 
   devToolsConnection.onDisconnect.addListener(function () {
-    subscription.unsubscribe()
+    tagsSub.unsubscribe()
+    actionHistorySub.unsubscribe()
   })
 })
