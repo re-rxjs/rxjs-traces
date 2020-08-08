@@ -1,16 +1,17 @@
-import { BehaviorSubject, Subject } from "rxjs"
+import { BehaviorSubject } from "rxjs"
 import {
   combineLatest,
   debounceTime,
+  distinctUntilChanged,
   filter,
+  finalize,
   share,
   take,
   takeUntil,
-  distinctUntilChanged,
-  finalize,
 } from "rxjs/operators"
 import { DataSet, EdgeOptions, NodeOptions } from "vis-network/standalone"
 import { incrementalHistory$, tagState$ } from "./messaging"
+import { scanMap } from "./operators/scanMap"
 
 export const filter$ = new BehaviorSubject("")
 
@@ -39,16 +40,13 @@ const createNodeWatch = (id: string, label: string) => {
     take(1),
   )
 
-  const nodeChange$ = new Subject<Node | null>()
-
-  const activeSubscriptions = new Set<string>()
-  sharedIncrementalHistory$
-    .pipe(takeUntil(tagRemoved$), combineLatest(filter$))
-    .subscribe(([action, filter]) => {
+  const nodeChange$ = sharedIncrementalHistory$.pipe(
+    takeUntil(tagRemoved$),
+    combineLatest(filter$),
+    scanMap((activeSubscriptions, [action, filter]) => {
       if (action.type === "reset") {
-        nodeChange$.next(null)
         activeSubscriptions.clear()
-        return
+        return [activeSubscriptions, null]
       }
 
       const historyAction = action.payload
@@ -80,18 +78,21 @@ const createNodeWatch = (id: string, label: string) => {
       const hasSubscriptions = activeSubscriptions.size > 0
 
       if (hasSubscriptions || hadSubscriptions) {
-        nodeChange$.next({
-          id,
-          label,
-          color: targetColor,
-          opacity: activeSubscriptions.size === 0 ? 0.5 : 1,
-        })
+        return [
+          activeSubscriptions,
+          {
+            id,
+            label,
+            color: targetColor,
+            opacity: activeSubscriptions.size === 0 ? 0.5 : 1,
+          },
+        ]
       } else {
-        nodeChange$.next(null)
+        return [activeSubscriptions, null]
       }
-    })
+    }, new Set<string>()),
+  )
 
-  // TODO nodeChanges can't be just a stream?
   nodeChange$
     .pipe(
       takeUntil(tagRemoved$),
