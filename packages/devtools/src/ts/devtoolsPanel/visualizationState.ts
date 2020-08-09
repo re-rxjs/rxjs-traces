@@ -1,16 +1,22 @@
-import { BehaviorSubject } from "rxjs"
+import { BehaviorSubject, combineLatest as cL, from, timer } from "rxjs"
 import {
   combineLatest,
+  concatMap,
   debounceTime,
   distinctUntilChanged,
   filter,
   finalize,
+  map,
+  mapTo,
   share,
+  startWith,
+  switchMapTo,
   take,
   takeUntil,
 } from "rxjs/operators"
 import { DataSet, EdgeOptions, NodeOptions } from "vis-network/standalone"
 import { incrementalHistory$, tagState$ } from "./messaging"
+import { skipResetBursts } from "./operators/incremental"
 import { scanMap } from "./operators/scanMap"
 
 export const filter$ = new BehaviorSubject("")
@@ -23,10 +29,33 @@ export interface Node extends NodeOptions {
 }
 
 const nodeColors = {
-  default: "#fc9797",
-  filterMiss: "#97c2fc",
+  filterHit: "#fc9797",
+  default: "#97c2fc",
   highlight: "#ffb347",
 }
+
+/**
+ * Can't alpha-blend with vis-network afaik.
+ * Used https://meyerweb.com/eric/tools/color-blend/#97C2FC:FFB347:10:hex to
+ * generate this sequence.
+ */
+const highlightSequence = [
+  "#FFB347",
+  "#F6B457",
+  "#ECB668",
+  "#E3B778",
+  "#D9B889",
+  "#D0BA99",
+  "#C6BBAA",
+  "#BDBDBA",
+  "#B3BECB",
+  "#AABFDB",
+  "#A0C1EC",
+  "#97C2FC",
+]
+const highlightSequence$ = from(highlightSequence).pipe(
+  concatMap((v) => timer(500 / highlightSequence.length).pipe(mapTo(v))),
+)
 
 const activeNodeWatches = new Set<string>()
 const createNodeWatch = (id: string, label: string) => {
@@ -40,25 +69,45 @@ const createNodeWatch = (id: string, label: string) => {
     take(1),
   )
 
+  const highlight$ = sharedIncrementalHistory$.pipe(
+    takeUntil(tagRemoved$),
+    skipResetBursts(),
+    filter(
+      (action) => action.type === "tagValueChange$" && action.payload.id === id,
+    ),
+    switchMapTo(highlightSequence$),
+  )
+
+  const filterHit$ = filter$.pipe(
+    takeUntil(tagRemoved$),
+    map(
+      (filter) =>
+        Boolean(filter) &&
+        label.toLocaleLowerCase().includes(filter.toLocaleLowerCase()),
+    ),
+  )
+
+  // If filterHit = true, color = filterHit. Otherwise, default color / flashing
+  const color$ = cL(filterHit$, highlight$).pipe(
+    map(([filter, highlight$]) => {
+      if (filter) {
+        return nodeColors.filterHit
+      }
+      return highlight$
+    }),
+    startWith(nodeColors.default),
+  )
+
   const nodeChange$ = sharedIncrementalHistory$.pipe(
     takeUntil(tagRemoved$),
-    combineLatest(filter$),
-    scanMap((activeSubscriptions, [action, filter]) => {
+    combineLatest(color$),
+    scanMap((activeSubscriptions, [action, targetColor]) => {
       if (action.type === "reset") {
         activeSubscriptions.clear()
         return [activeSubscriptions, null]
       }
 
       const historyAction = action.payload
-      const filterHit =
-        filter && label.toLocaleLowerCase().includes(filter.toLocaleLowerCase())
-      const targetColor =
-        historyAction.type == "tagValueChange$" &&
-        historyAction.payload.id === id
-          ? nodeColors.highlight
-          : filterHit
-          ? nodeColors.default
-          : nodeColors.filterMiss
 
       const actionIsTarget = historyAction.payload.id === id
       const hadSubscriptions = activeSubscriptions.size > 0
