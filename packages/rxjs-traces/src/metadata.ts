@@ -62,7 +62,14 @@ export const detectRefChanges = <T>(
   return result;
 };
 
-export function findTagRefs(observable: Observable<unknown>) {
+export function findTagRefs(
+  observable: Observable<unknown>,
+  visited = new WeakSet<Observable<unknown>>()
+) {
+  if (visited.has(observable)) {
+    return [];
+  }
+  visited.add(observable);
   const metadata = getMetadata(observable);
 
   const tags = new Set<string>();
@@ -71,7 +78,7 @@ export function findTagRefs(observable: Observable<unknown>) {
     if (refMetadata.tag) {
       tags.add(refMetadata.tag);
     } else {
-      const tagRefs = findTagRefs(ref);
+      const tagRefs = findTagRefs(ref, visited);
       tagRefs.forEach((tag) => tags.add(tag));
     }
   });
@@ -79,7 +86,14 @@ export function findTagRefs(observable: Observable<unknown>) {
   return Array.from(tags.values());
 }
 
-export function findReverseTagRefs(observable: Observable<unknown>) {
+export function findReverseTagRefs(
+  observable: Observable<unknown>,
+  visited = new WeakSet<Observable<unknown>>()
+) {
+  if (visited.has(observable)) {
+    return [];
+  }
+  visited.add(observable);
   const metadata = getMetadata(observable);
 
   const refs = new Set<Observable<unknown>>();
@@ -88,7 +102,7 @@ export function findReverseTagRefs(observable: Observable<unknown>) {
     if (refMetadata.tag) {
       refs.add(ref);
     } else {
-      const tagRefs = findReverseTagRefs(ref);
+      const tagRefs = findReverseTagRefs(ref, visited);
       tagRefs.forEach((ref) => refs.add(ref));
     }
   });
