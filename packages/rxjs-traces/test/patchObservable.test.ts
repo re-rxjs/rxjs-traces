@@ -1,5 +1,5 @@
 import { shareLatest } from '@react-rxjs/core';
-import { concat, from, interval, merge, Observable, of } from 'rxjs';
+import { concat, defer, from, interval, merge, Observable, of } from 'rxjs';
 import { marbles } from 'rxjs-marbles/jest';
 import {
   catchError,
@@ -9,6 +9,7 @@ import {
   publish,
   scan,
   share,
+  startWith,
   switchMap,
   take,
   takeLast,
@@ -121,6 +122,22 @@ describe('patchObservable', () => {
 
         m.expect(stream).toBeObservable(expected);
         m.expect(source).toHaveSubscriptions(subs);
+      })
+    );
+
+    it(
+      `doesn't break recursive observables`,
+      marbles((m) => {
+        const deferredCount = defer(() => source).pipe(startWith(0));
+
+        const source: Observable<string> = m.cold('123|').pipe(
+          withLatestFrom(deferredCount),
+          map(([a, b]) => String(Number(a) + Number(b))),
+          share()
+        );
+        const expected = '136|';
+
+        m.expect(source).toBeObservable(expected);
       })
     );
   });
@@ -328,6 +345,32 @@ describe('patchObservable', () => {
 
       expect(tags.result1.refs).toEqual(['source']);
       expect(tags.result2.refs).toEqual(['source']);
+      expect(tags.source.refs).toEqual([]);
+    });
+
+    it('detects recursive references', async () => {
+      const deferredCount = defer(() => source).pipe(startWith(0));
+
+      const source: Observable<number> = interval(10).pipe(
+        take(2),
+        addDebugTag('source'),
+        withLatestFrom(deferredCount),
+        addDebugTag('merged'),
+        map(([a, b]) => a + b),
+        addDebugTag('result'),
+        share()
+      );
+
+      const tags = await source
+        .pipe(
+          takeLast(1),
+          withLatestFrom(tagValue$),
+          map(([_, tags]) => tags)
+        )
+        .toPromise();
+
+      expect(tags.result.refs).toEqual(['merged']);
+      expect(tags.merged.refs).toEqual(['result', 'source']);
       expect(tags.source.refs).toEqual([]);
     });
   });
