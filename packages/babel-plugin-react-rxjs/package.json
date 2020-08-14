@@ -1,0 +1,10 @@
+{
+  "name": "babel-plugin-react-rxjs",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "babel-plugin-tester": "^9.2.0",
+    "jest": "^26.4.0"
+  }
+}
