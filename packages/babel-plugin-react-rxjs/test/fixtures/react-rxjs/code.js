@@ -1,30 +1,6 @@
-function abc() {
+import { bind } from '@react-rxjs/core';
 
-  for (var i = 0; i < 100; i++) {
-    console.log(i);
-  }
-
-  return 42;
-}
-
-function xyz() {
-
-  for (var i = 0; i < 100; i++) {
-    console.log(i);
-  }
-
-  if (true) {
-    console.log('100');
-  }
-
-  otherFunction();
-
-}
-
-function outer() {
-  function inner() {
-    console.log('does something');
-  }
-
-  return inner;
-}
+const [useCount, count$] = bind(source$.pipe(
+  scan(value => value + 1, 0),
+  startWith(0)
+));

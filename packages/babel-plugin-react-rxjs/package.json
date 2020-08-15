@@ -4,6 +4,7 @@
   "main": "src/index.js",
   "license": "MIT",
   "devDependencies": {
+    "@babel/template": "^7.10.4",
     "babel-plugin-tester": "^9.2.0",
     "jest": "^26.4.0"
   }
