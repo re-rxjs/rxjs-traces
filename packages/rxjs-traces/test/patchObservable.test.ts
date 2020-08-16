@@ -19,6 +19,7 @@ import {
 import { addDebugTag, patchObservable, tagValue$ } from '../src';
 import { resetTag$ } from '../src/changes';
 import { restoreObservable } from '../src/patchObservable';
+import { findTagRefs } from '../src/metadata';
 
 afterEach(() => {
   resetTag$();
@@ -373,5 +374,31 @@ describe('patchObservable', () => {
       expect(tags.merged.refs).toEqual(['result', 'source']);
       expect(tags.source.refs).toEqual([]);
     });
+  });
+
+  it('improves stack traces', async () => {
+    const source: Observable<number> = interval(10).pipe(
+      take(5),
+      addDebugTag('source'),
+      map((a) => {
+        if (a > 2) {
+          throw new Error('next error');
+        }
+        return a;
+      }),
+      addDebugTag('result')
+    );
+
+    const result = source
+      .pipe(takeLast(1), withLatestFrom(tagValue$))
+      .toPromise();
+    await expect(result).rejects.toThrow();
+
+    try {
+      await result;
+    } catch (ex) {
+      expect(ex.detectedIn).toEqual(['result']);
+      expect(findTagRefs(source)).toEqual(['source']);
+    }
   });
 });

@@ -1,26 +1,19 @@
-import React, { Suspense } from "react"
-import { bind, shareLatest } from "@react-rxjs/macro"
-import { interval, of } from "rxjs"
+import React from "react"
+import { ErrorBoundary, FallbackProps } from "react-error-boundary"
+import { bind } from "@react-rxjs/core"
+import { interval } from "rxjs"
 import { addDebugTag } from "rxjs-traces"
-import { map, switchMap, take } from "rxjs/operators"
+import { map, startWith } from "rxjs/operators"
 import "./App.css"
-
-const random$ = interval(500).pipe(
-  map(() => Math.random()),
-  shareLatest(),
-  addDebugTag("random"),
-)
-random$.subscribe()
 
 const stream = interval(2000).pipe(
   addDebugTag("interval"),
-  switchMap((v, i) => {
+  startWith(0),
+  map((v, i) => {
     if (i > 0 && i % 3 === 0) {
-      return random$.pipe(take(1))
-    } else if (i > 0 && i % 4 === 0) {
-      return of(v).pipe(addDebugTag("embedded"))
+      throw new Error("error")
     }
-    return of(v)
+    return v
   }),
   addDebugTag("result"),
 )
@@ -33,12 +26,27 @@ const RandomComponent = () => {
   return null
 }
 
+function ErrorFallback({
+  error,
+  componentStack,
+  resetErrorBoundary,
+}: FallbackProps) {
+  return (
+    <div role="alert">
+      <p>Something went wrong:</p>
+      <pre>{error?.message}</pre>
+      <pre>{componentStack}</pre>
+      <button onClick={resetErrorBoundary}>Try again</button>
+    </div>
+  )
+}
+
 function App() {
   return (
     <div className="App">
-      <Suspense fallback={<div>Loading...</div>}>
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
         <RandomComponent />
-      </Suspense>
+      </ErrorBoundary>
     </div>
   )
 }

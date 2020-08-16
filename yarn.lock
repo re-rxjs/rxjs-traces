@@ -1162,6 +1162,13 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
+"@babel/runtime@^7.10.5":
+  version "7.11.2"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.11.2.tgz#f549c13c754cc40b87644b9fa9f09a6a95fe0736"
+  integrity sha512-TeWkU52so0mPtDcaCTxNBI/IHiz0pZgr8VEFqXFtZWpYD08ZB6FaSwVAS8MKRQAP3bYKiVjwysOJgMFY28o6Tw==
+  dependencies:
+    regenerator-runtime "^0.13.4"
+
 "@babel/template@^7.10.4", "@babel/template@^7.4.0", "@babel/template@^7.8.6":
   version "7.10.4"
   resolved "https://registry.yarnpkg.com/@babel/template/-/template-7.10.4.tgz#3251996c4200ebc71d1a8fc405fba940f36ba278"
@@ -1445,15 +1452,10 @@
   resolved "https://registry.yarnpkg.com/@nodelib/fs.stat/-/fs.stat-1.1.3.tgz#2b5a3ab3f918cca48a8c754c08168e3f03eba61b"
   integrity sha512-shAmDyaQC4H92APFoIaVDHCx5bStIocgvbwQyxPRrbUY20V1EYTbSDchWbuwlMG3V17cprZhA6+78JfB+3DTPw==
 
-"@react-rxjs/core@^0.1.0-alpha.0":
-  version "0.1.0-alpha.0"
-  resolved "https://registry.yarnpkg.com/@react-rxjs/core/-/core-0.1.0-alpha.0.tgz#e2ad14f60c1450337f17e033a85b9af09c564b09"
-  integrity sha512-p8/J9NUYMxVbIxO3yRoslKgF5UWIgklfAZ69cXQtMM2yafnhB9J7zHfHM1HOO9L366cZaCAK/DDfulIl5/CKww==
-
-"@react-rxjs/core@^0.1.2":
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/@react-rxjs/core/-/core-0.1.2.tgz#5c2fab5500efd7ac359c00845fbdd9b7f0b70ead"
-  integrity sha512-Lztpv681KC8eT5hRj+ndVw8mPRxREAx2ZI5QBSBNfvVammERV64ZqBGaeg6mnYJp5Hr0Dv4G6QME2M+kq3J5PA==
+"@react-rxjs/core@0.2.0", "@react-rxjs/core@2.0.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@react-rxjs/core/-/core-0.2.0.tgz#3261a67d285698e64cbf167e1b5691226dfc1b61"
+  integrity sha512-95xlW/g3ccJLHmtUK8qT6BZN1pc+Hw067ZcyMAWQa1dvzGXhYKdTElQIvlDnvRG+OEjCO6yhNLqBOCy1sU9oBQ==
 
 "@rollup/plugin-commonjs@^11.0.0":
   version "11.1.0"
@@ -9980,6 +9982,13 @@ react-dom@^16.13.1:
     object-assign "^4.1.1"
     prop-types "^15.6.2"
     scheduler "^0.19.1"
+
+react-error-boundary@^2.3.1:
+  version "2.3.1"
+  resolved "https://registry.yarnpkg.com/react-error-boundary/-/react-error-boundary-2.3.1.tgz#bd6c8a9777224b6a1153c5f63e1ac86bf039f657"
+  integrity sha512-w1i++MM5GV6WTnM3MtLdw9CNXxqydkZwbwNDT9GBFBaWs0sp21z27DGIevb3fism1T+LGfdWgTFlhaq7G1pIMA==
+  dependencies:
+    "@babel/runtime" "^7.10.5"
 
 react-error-overlay@^6.0.7:
   version "6.0.7"
