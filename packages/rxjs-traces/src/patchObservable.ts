@@ -7,7 +7,12 @@ import {
   Subscription,
   TeardownLogic,
 } from 'rxjs';
-import { detectRefChanges, findReverseTagRefs, getMetadata } from './metadata';
+import {
+  detectRefChanges,
+  findReverseTagRefs,
+  getMetadata,
+  findTagRefs,
+} from './metadata';
 
 const Patched = Symbol('patched');
 export const isPatched = (ObservableCtor: Function) =>
@@ -33,8 +38,9 @@ export function patchObservable(ObservableCtor: typeof Observable) {
     error?: ((error: any) => void) | null,
     complete?: (() => void) | null
   ) {
-    const observer = getObserver(observerOrNext, error, complete);
     const metadata = getMetadata(this);
+    const observerArg = getObserver(observerOrNext, error, complete);
+    const observer = addErrorDetection(observerArg, this, metadata.tag);
 
     /** Imagine this case, the most simple one:
 
@@ -149,10 +155,14 @@ export function patchObservable(ObservableCtor: typeof Observable) {
     return callOriginalSubscribe(overridenThis, overridenObserver);
   };
   (ObservableCtor as any)[Patched] = true;
+
+  globalThis.addEventListener('error', onUncaughtException);
 }
 export function restoreObservable(ObservableCtor: typeof Observable) {
   ObservableCtor.prototype.subscribe = originalSubscribe as typeof ObservableCtor.prototype.subscribe;
   (ObservableCtor as any)[Patched] = false;
+
+  globalThis.removeEventListener('error', onUncaughtException);
 }
 
 function getObserver<T>(
@@ -193,4 +203,75 @@ function getObserver<T>(
       }
     },
   };
+}
+
+interface EnhancedError extends Error {
+  source?: Observable<unknown>;
+  detectedIn?: Array<string>;
+}
+function onUncaughtException({ error }: ErrorEvent) {
+  if (error instanceof Error) {
+    const enhancedError = error as EnhancedError;
+    if (enhancedError.source) {
+      const refs = findTagRefs(enhancedError.source);
+      if (refs.length)
+        console.warn(
+          'rxjs-traces detected error came in stream with references to: [' +
+            refs.join(', ') +
+            ']'
+        );
+    }
+    if (enhancedError.detectedIn) {
+      console.warn(
+        'rxjs-traces detected error went through tags: [' +
+          enhancedError.detectedIn.join(', ') +
+          ']'
+      );
+    }
+  }
+}
+
+function addErrorDetection<T>(
+  observer: Observer<T>,
+  source: Observable<T>,
+  name: string | null
+): Observer<T> {
+  const result: Observer<T> = {
+    next: (value) => {
+      try {
+        observer.next(value);
+      } catch (err) {
+        // Catch errors thrown from rxjs itself (such as returning undefined in a switchMap)
+        if (source && err instanceof Error) {
+          const enhancedError = err as EnhancedError;
+          enhancedError.source = source;
+        }
+        throw err;
+      }
+    },
+    error: (err) => {
+      if (name && err instanceof Error) {
+        const enhancedError = err as EnhancedError;
+        if (source && !enhancedError.source) {
+          enhancedError.source = source;
+        }
+        enhancedError.detectedIn = enhancedError.detectedIn || [];
+        enhancedError.detectedIn.push(name);
+      }
+      observer.error(err);
+    },
+    complete: observer.complete,
+  };
+  if (name) {
+    Object.defineProperty(result.next, 'name', {
+      value: `DebugTag(--------> ${name} <--------).next`,
+    });
+    Object.defineProperty(result.error, 'name', {
+      value: `DebugTag(--------> ${name} <--------).error`,
+    });
+    Object.defineProperty(result.complete, 'name', {
+      value: `DebugTag(--------> ${name} <--------).complete`,
+    });
+  }
+  return result;
 }
