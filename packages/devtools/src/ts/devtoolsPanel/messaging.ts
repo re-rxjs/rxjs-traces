@@ -23,7 +23,7 @@ import { deserialize } from "./deserialize"
 
 export const copy$ = new Subject<string>()
 
-const actionHistory$ = new Observable<ActionHistory>(obs => {
+const actionHistory$ = new Observable<ActionHistory>((obs) => {
   var backgroundPageConnection = chrome.runtime.connect({
     name: "devtools-page_" + chrome.devtools.inspectedWindow.tabId,
   })
@@ -32,7 +32,7 @@ const actionHistory$ = new Observable<ActionHistory>(obs => {
     obs.next(deserialize(actionHistory))
   })
 
-  const copySubscription = copy$.subscribe(payload => {
+  const copySubscription = copy$.subscribe((payload) => {
     backgroundPageConnection.postMessage({
       type: "copy",
       payload,
@@ -135,7 +135,7 @@ export const incrementalHistory$ = combineLatest(actionHistory$, slice$).pipe(
 
 export const latestTagValue$ = (id: string) =>
   incrementalHistory$.pipe(
-    filter(action => {
+    filter((action) => {
       if (action.type === "reset") {
         return true
       }
@@ -154,11 +154,11 @@ export const latestTagValue$ = (id: string) =>
       }
       return tagStateReducer(state, action.payload)
     }, null as DebugTag | null),
-    filter(v => v !== null),
-    map(v => v!),
+    filter((v) => v !== null),
+    map((v) => v!),
   )
 
 export const historyLength$ = actionHistory$.pipe(
-  map(history => history.length),
+  map((history) => history.length),
   startWith(0),
 )

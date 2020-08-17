@@ -56,8 +56,8 @@ export const createTabState = () => {
             newRef: null as null | { id: string; ref: string },
           },
         ),
-        map(v => v.newRef!),
-        filter(v => !!v),
+        map((v) => v.newRef!),
+        filter((v) => !!v),
       ),
     ),
   )

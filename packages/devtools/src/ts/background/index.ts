@@ -1,10 +1,10 @@
 import { createTabState, ActionHistory } from "./tabState"
 
-export type { ActionHistory };
+export type { ActionHistory }
 
 const tabStates = {} as Record<string, ReturnType<typeof createTabState>>
 
-chrome.runtime.onMessage.addListener(function(message, sender) {
+chrome.runtime.onMessage.addListener(function (message, sender) {
   if (sender.tab && sender.tab.id) {
     if (!(sender.tab.id in tabStates)) {
       tabStates[sender.tab.id] = createTabState()
@@ -26,7 +26,7 @@ chrome.runtime.onMessage.addListener(function(message, sender) {
   }
 })
 
-chrome.runtime.onConnect.addListener(function(devToolsConnection) {
+chrome.runtime.onConnect.addListener(function (devToolsConnection) {
   if (!devToolsConnection.name.startsWith("devtools-page_")) {
     return
   }
@@ -36,17 +36,18 @@ chrome.runtime.onConnect.addListener(function(devToolsConnection) {
     tabStates[toolsTabId] = createTabState()
   }
 
-  const subscription = tabStates[toolsTabId].actionHistory$.subscribe((value: ActionHistory) =>
-    devToolsConnection.postMessage({
-      actionHistory: value,
-    }),
+  const subscription = tabStates[toolsTabId].actionHistory$.subscribe(
+    (value: ActionHistory) =>
+      devToolsConnection.postMessage({
+        actionHistory: value,
+      }),
   )
 
-  devToolsConnection.onMessage.addListener(message => {
+  devToolsConnection.onMessage.addListener((message) => {
     if (typeof message === "object" && message.type === "copy") {
       document.addEventListener(
         "copy",
-        e => {
+        (e) => {
           if (!e.clipboardData) {
             console.error("no clipboard data")
             return
@@ -60,7 +61,7 @@ chrome.runtime.onConnect.addListener(function(devToolsConnection) {
     }
   })
 
-  devToolsConnection.onDisconnect.addListener(function() {
+  devToolsConnection.onDisconnect.addListener(function () {
     subscription.unsubscribe()
   })
 })

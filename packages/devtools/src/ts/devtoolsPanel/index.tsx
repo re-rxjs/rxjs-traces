@@ -29,7 +29,7 @@ const App = () => {
           id={selectedTag.id}
           initialX={selectedTag.x}
           initialY={selectedTag.y}
-          onCopy={value => copy$.next(value)}
+          onCopy={(value) => copy$.next(value)}
         />
       )}
       <TimeTravelSlider />

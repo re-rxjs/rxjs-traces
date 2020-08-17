@@ -15,15 +15,11 @@
     "build": "tsdx build",
     "test": "tsdx test",
     "lint": "tsdx lint src test",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md}\" \"test/**/*.{js,jsx,ts,tsx,json,md}\"",
     "prepare": "tsdx build"
   },
   "peerDependencies": {
     "rxjs": "^6.6.0"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "tsdx lint"
-    }
   },
   "prettier": {
     "printWidth": 80,
@@ -37,7 +33,6 @@
   "devDependencies": {
     "@react-rxjs/core": "^0.1.0-alpha.0",
     "@types/uuid": "^8.0.0",
-    "husky": "^4.2.5",
     "rxjs": "^6.6.0",
     "rxjs-for-await": "^0.0.2",
     "rxjs-marbles": "^6.0.1",

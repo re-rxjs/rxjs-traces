@@ -79,7 +79,7 @@ const ValueInspector: FC<{
     const keys = Object.keys(value)
     return (
       <div className="value-inspector__expanded">
-        {keys.map(key => (
+        {keys.map((key) => (
           <ValueInspector
             key={key}
             label={key}
@@ -95,7 +95,7 @@ const ValueInspector: FC<{
   const expandElement = expandible ? (
     <span
       className="value-inspector__expand-toggle"
-      onClick={() => setExpanded(e => !e)}
+      onClick={() => setExpanded((e) => !e)}
     >
       {expanded ? "-" : "+"}
     </span>
