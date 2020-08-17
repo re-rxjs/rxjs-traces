@@ -36,6 +36,6 @@ const handleMessage = (event: MessageEvent) => {
 window.addEventListener("message", handleMessage, false)
 requestMessages()
 
-chrome.runtime.connect().onDisconnect.addListener(function() {
+chrome.runtime.connect().onDisconnect.addListener(function () {
   window.removeEventListener("message", handleMessage)
 })

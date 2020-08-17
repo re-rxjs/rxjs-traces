@@ -11,7 +11,7 @@ export const FilterBar: FC<{
       type="text"
       placeholder="Search..."
       value={filter}
-      onChange={evt => onFilterChange(evt.target.value)}
+      onChange={(evt) => onFilterChange(evt.target.value)}
     />
   </div>
 )

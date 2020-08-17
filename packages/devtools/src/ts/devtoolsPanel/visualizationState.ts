@@ -80,7 +80,7 @@ const createNodeWatch = (id: string, label: string) => {
 
   const changeSubscription = nodeChange$
     .pipe(debounceTime(0))
-    .subscribe(node => {
+    .subscribe((node) => {
       const nodeExists = nodes.get(id)
       if (!node) {
         if (nodeExists) {
@@ -106,11 +106,11 @@ const createNodeWatch = (id: string, label: string) => {
 
 sharedIncrementalHistory$
   .pipe(
-    filter(action => action.type === "incremental"),
-    map(action => (action.type === "reset" ? null! : action.payload)),
+    filter((action) => action.type === "incremental"),
+    map((action) => (action.type === "reset" ? null! : action.payload)),
     filter(({ type }) => type === "newTag$"),
   )
-  .subscribe(newTag => {
+  .subscribe((newTag) => {
     if (newTag.type !== "newTag$") {
       return
     }
@@ -118,7 +118,7 @@ sharedIncrementalHistory$
   })
 
 const edgeQtyChanges = sharedIncrementalHistory$.pipe(
-  filter(action => {
+  filter((action) => {
     if (action.type === "reset") {
       return true
     }
@@ -126,7 +126,7 @@ const edgeQtyChanges = sharedIncrementalHistory$.pipe(
     const interestingTypes: typeof type[] = ["tagRefDetection$"]
     return interestingTypes.includes(type)
   }),
-  map(action => {
+  map((action) => {
     if (action.type === "reset" || action.payload.type !== "tagRefDetection$") {
       return {
         type: "remove-all" as const,
@@ -147,7 +147,7 @@ export interface Edge extends EdgeOptions {
 }
 export const edges = new DataSet<Edge>()
 
-edgeQtyChanges.subscribe(action => {
+edgeQtyChanges.subscribe((action) => {
   switch (action.type) {
     case "add":
       const { from, to } = action
