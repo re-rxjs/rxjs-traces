@@ -5,11 +5,7 @@
   "license": "MIT",
   "types": "index.d.ts",
   "devDependencies": {
-    "@babel/template": "^7.10.4",
-    "@react-rxjs/core": "^0.1.2",
-    "babel-plugin-macros": "^2.8.0",
-    "babel-plugin-tester": "^9.2.0",
-    "jest": "^26.4.0"
+    "@react-rxjs/core": "^0.1.2"
   },
   "keywords": [
     "react-rxjs",

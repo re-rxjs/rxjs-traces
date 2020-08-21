@@ -25,6 +25,8 @@
   "devDependencies": {
     "@babel/core": "^7.11.4",
     "@babel/template": "^7.10.4",
+    "@types/babel-plugin-macros": "^2.8.2",
+    "babel-plugin-macros": "^2.8.0",
     "babel-plugin-tester": "^9.2.0",
     "tsdx": "^0.13.2",
     "tslib": "^2.0.0",
