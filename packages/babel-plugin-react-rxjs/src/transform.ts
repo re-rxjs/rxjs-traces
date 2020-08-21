@@ -32,12 +32,48 @@ export function transformCallExpression(
   }
 
   const firstParameter = path.get("arguments.0") as NodePath
-  const firstParameterNode = firstParameter.node
-  const replacement = buildTagWrapper({
-    IMPORTED: importIdentifier,
-    NAME: t.stringLiteral(tagName),
-    ID: t.stringLiteral(tagName),
-    EXPRESSION: firstParameterNode,
-  })
-  firstParameter.replaceWith(replacement)
+  if (
+    t.isArrowFunctionExpression(firstParameter.node) ||
+    t.isFunctionExpression(firstParameter.node)
+  ) {
+    // TODO This will fail for `bind(someImportedFactoryFunction)` :(
+    const functionPath = firstParameter as NodePath<
+      Babel.types.ArrowFunctionExpression | Babel.types.FunctionExpression
+    >
+    const body = functionPath.get("body").node
+    const bodyExpression = t.isExpression(body)
+      ? body
+      : // If it's a block, then wrap in a IIFE
+        buildIIFE({
+          BODY: body,
+        }).expression
+
+    const replacement = buildTagWrapper({
+      IMPORTED: importIdentifier,
+      NAME: t.stringLiteral(tagName),
+      ID: t.stringLiteral(tagName),
+      EXPRESSION: bodyExpression,
+    }) as Babel.types.ExpressionStatement
+    if (t.isArrowFunctionExpression(firstParameter.node)) {
+      functionPath.get("body").replaceWith(replacement)
+    } else {
+      functionPath
+        .get("body")
+        .replaceWith(
+          t.blockStatement([t.returnStatement(replacement.expression)]),
+        )
+    }
+  } else {
+    const replacement = buildTagWrapper({
+      IMPORTED: importIdentifier,
+      NAME: t.stringLiteral(tagName),
+      ID: t.stringLiteral(tagName),
+      EXPRESSION: firstParameter.node,
+    })
+    firstParameter.replaceWith(replacement)
+  }
 }
+
+const buildIIFE = template(`
+  (() => BODY)()
+`) as (args: any) => Babel.types.ExpressionStatement
