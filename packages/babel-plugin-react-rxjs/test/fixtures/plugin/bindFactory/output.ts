@@ -1,23 +1,23 @@
-import * as autoRxjsTraces from "rxjs-traces"
+import * as autoRxjsTraces from "babel-plugin-react-rxjs"
 import { bind } from "@react-rxjs/core"
-const [useCount, count$] = bind((id) =>
-  autoRxjsTraces.addDebugTag(
+const [useCount, count$] = bind(
+  autoRxjsTraces.wrapReactRxjs(
+    (id) =>
+      source$.pipe(
+        scan((value) => value + id, 0),
+        startWith(0),
+      ),
     "count$",
-    "count$",
-  )(
-    source$.pipe(
-      scan((value) => value + id, 0),
-      startWith(0),
-    ),
   ),
 )
-const [, delayedCount$] = bind(function (id) {
-  return autoRxjsTraces.addDebugTag(
-    "delayedCount$",
-    "delayedCount$",
-  )(
-    (() => {
-      return count$.pipe(delay(100))
-    })(),
-  )
-})
+const [, delayedCount$] = bind(
+  autoRxjsTraces.wrapReactRxjs(function (id) {
+    return count$(id).pipe(delay(100))
+  }, "delayedCount$"),
+)
+
+function sum(id) {
+  return count$(id).pipe(scan((a, b) => a + b, 0))
+}
+
+const [, countSum$] = bind(autoRxjsTraces.wrapReactRxjs(sum, "countSum$"))

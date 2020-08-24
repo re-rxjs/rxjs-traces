@@ -13,22 +13,21 @@ export function babelPlugin({ types: t }: typeof Babel): PluginObj {
     t.stringLiteral("rxjs-traces"),
   )
 
-  let autoImportAdded = false
-  const ensureImport = (path: NodePath<any>) => {
-    if (!autoImportAdded) {
-      const program = path.findParent((path) =>
-        t.isProgram(path.node),
-      ) as NodePath<Babel.types.Program>
-      program.unshiftContainer("body", autoImportExpression)
-      autoImportAdded = true
+  const createProgramVisitor = (): Babel.Visitor => {
+    let autoImportAdded = false
+    const ensureImport = (path: NodePath<any>) => {
+      if (!autoImportAdded) {
+        const program = path.findParent((path) =>
+          t.isProgram(path.node),
+        ) as NodePath<Babel.types.Program>
+        program.unshiftContainer("body", autoImportExpression)
+        autoImportAdded = true
+      }
     }
-  }
 
-  const importedTargetNames: string[] = []
+    const importedTargetNames: string[] = []
 
-  return {
-    name: "react-rxjs",
-    visitor: {
+    return {
       ImportSpecifier(path) {
         const importDeclaration = assertType(t.isImportDeclaration, path.parent)
         if (importDeclaration?.source.value === packageName) {
@@ -45,6 +44,15 @@ export function babelPlugin({ types: t }: typeof Babel): PluginObj {
 
           transformCallExpression(t, path, importIdentifier)
         }
+      },
+    }
+  }
+
+  return {
+    name: "react-rxjs",
+    visitor: {
+      Program(path) {
+        path.traverse(createProgramVisitor())
       },
     },
   }

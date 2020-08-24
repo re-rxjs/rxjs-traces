@@ -8,5 +8,10 @@ const [useCount, count$] = bind((id) =>
 )
 
 const [, delayedCount$] = bind(function (id) {
-  return count$.pipe(delay(100))
+  return count$(id).pipe(delay(100))
 })
+
+function sum(id) {
+  return count$(id).pipe(scan((a, b) => a + b, 0))
+}
+const [, countSum$] = bind(sum)
