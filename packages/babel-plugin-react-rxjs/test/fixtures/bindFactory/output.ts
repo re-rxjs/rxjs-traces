@@ -1,4 +1,4 @@
-import * as autoRxjsTraces from "babel-plugin-react-rxjs"
+import * as autoRxjsTraces from "rxjs-traces"
 import { bind } from "@react-rxjs/core"
 const [useCount, count$] = bind(
   autoRxjsTraces.wrapReactRxjs(
