@@ -52,7 +52,26 @@ export function babelPlugin({ types: t }: typeof Babel): PluginObj {
     name: "react-rxjs",
     visitor: {
       Program(path) {
-        path.traverse(createProgramVisitor())
+        const imports = path
+          .get("body")
+          .filter((statementPath) =>
+            t.isImportDeclaration(statementPath.node),
+          ) as NodePath<Babel.types.ImportDeclaration>[]
+
+        const specifiers = imports.flatMap((importPath) =>
+          importPath.get("specifiers"),
+        )
+        const hasImport = specifiers.some((specifier) => {
+          const node = specifier.node
+          return (
+            t.isImportNamespaceSpecifier(node) &&
+            node.local.name === importIdentifier.name
+          )
+        })
+
+        if (!hasImport) {
+          path.traverse(createProgramVisitor())
+        }
       },
     },
   }
