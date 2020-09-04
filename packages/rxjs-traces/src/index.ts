@@ -13,3 +13,4 @@ export {
 export { patchObservable } from './patchObservable';
 export { patchOperator } from './patchOperator';
 export { createLink } from './link';
+export { wrapReactRxjs } from './wrapReactRxjs';

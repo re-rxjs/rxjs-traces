@@ -1,5 +1,5 @@
 import React, { Suspense } from "react"
-import { connectObservable, shareLatest } from "react-rxjs"
+import { bind, shareLatest } from "@react-rxjs/macro"
 import { interval, of } from "rxjs"
 import { addDebugTag } from "rxjs-traces"
 import { map, switchMap, take } from "rxjs/operators"
@@ -25,7 +25,7 @@ const stream = interval(2000).pipe(
   addDebugTag("result"),
 )
 
-const [useStream] = connectObservable(stream)
+const [useStream] = bind(stream)
 
 const RandomComponent = () => {
   useStream()

@@ -1,0 +1,10 @@
+{
+  "overrides": [
+    {
+      "files": "test/fixtures/**/*.ts",
+      "rules": {
+        "@typescript-eslint/no-unused-vars": 0
+      }
+    }
+  ]
+}
