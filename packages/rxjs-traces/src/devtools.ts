@@ -1,5 +1,5 @@
-import { merge, Observable, Observer, Subscription } from 'rxjs';
-import { finalize, map, share } from 'rxjs/operators';
+import { merge } from 'rxjs';
+import { map, share } from 'rxjs/operators';
 import {
   newTag$,
   tagRefDetection$,
@@ -8,41 +8,42 @@ import {
   tagValueChange$,
 } from './changes';
 
-const eventHistory$ = publishReplayOnce(
-  merge(
-    newTag$.pipe(
-      map((payload) => ({
-        type: 'new-tag',
-        payload,
-      }))
-    ),
-    tagSubscription$.pipe(
-      map((payload) => ({
-        type: 'tag-subscription',
-        payload,
-      }))
-    ),
-    tagUnsubscription$.pipe(
-      map((payload) => ({
-        type: 'tag-unsubscription',
-        payload,
-      }))
-    ),
-    tagValueChange$.pipe(
-      map((payload) => ({
-        type: 'tag-value-change',
-        payload,
-      }))
-    ),
-    tagRefDetection$.pipe(
-      map((payload) => ({
-        type: 'tag-ref-detection',
-        payload,
-      }))
-    )
+const eventHistory$ = merge(
+  newTag$.pipe(
+    map((payload) => ({
+      type: 'new-tag',
+      payload,
+    }))
+  ),
+  tagSubscription$.pipe(
+    map((payload) => ({
+      type: 'tag-subscription',
+      payload,
+    }))
+  ),
+  tagUnsubscription$.pipe(
+    map((payload) => ({
+      type: 'tag-unsubscription',
+      payload,
+    }))
+  ),
+  tagValueChange$.pipe(
+    map((payload) => ({
+      type: 'tag-value-change',
+      payload,
+    }))
+  ),
+  tagRefDetection$.pipe(
+    map((payload) => ({
+      type: 'tag-ref-detection',
+      payload,
+    }))
   )
-);
-let extensionSubscription: Subscription | null = null;
+).pipe(share());
+
+// For subscribers that are late (i.e. devtools take some time to initialize) we must keep old events.
+const pastHistory: any[] = [];
+
 window.addEventListener('message', (event: MessageEvent) => {
   const { data, origin } = event;
 
@@ -55,24 +56,51 @@ window.addEventListener('message', (event: MessageEvent) => {
     data.source === 'rxjs-traces-devtools' &&
     data.type === 'receive'
   ) {
-    if (extensionSubscription) {
-      extensionSubscription.unsubscribe();
-    }
-    extensionSubscription = eventHistory$.subscribe(({ type, payload }) => {
-      window.postMessage(
-        {
-          source: 'rxjs-traces',
-          type,
-          payload: prepareForTransmit(payload),
-        },
-        window.location.origin
-      );
-    });
+    window.postMessage(
+      {
+        source: 'rxjs-traces',
+        type: 'event-history',
+        payload: prepareForTransmit(pastHistory),
+      },
+      window.location.origin
+    );
   }
 });
 
+declare class WeakRef<T extends object> {
+  constructor(target?: T);
+  deref(): T | undefined;
+}
+
 export function initDevtools() {
-  eventHistory$.connect();
+  eventHistory$.subscribe(({ type, payload }) => {
+    const value = (payload as any).value;
+    if (
+      type === 'tag-value-change' &&
+      typeof value === 'object' &&
+      value !== null
+    ) {
+      pastHistory.push({
+        type,
+        payload: {
+          payload,
+          value: new WeakRef(value),
+        },
+      });
+    } else {
+      pastHistory.push({ type, payload });
+    }
+
+    window.postMessage(
+      {
+        source: 'rxjs-traces',
+        type,
+        payload: prepareForTransmit(payload),
+      },
+      window.location.origin
+    );
+  });
+
   window.postMessage(
     {
       source: 'rxjs-traces-bridge',
@@ -86,11 +114,19 @@ export function initDevtools() {
  * Clones the object changing the values that can't be transmitted:
  *  - Symbols
  *  - undefined
+ *  - WeakRefs
  */
 function prepareForTransmit<T>(
   value: T,
   visitedValues = new WeakMap<any, any>()
-) {
+): any {
+  if (value instanceof WeakRef) {
+    const ref = value.deref();
+    if (ref === undefined) {
+      return 'Symbol(GCed Object)';
+    }
+    return prepareForTransmit(value, visitedValues);
+  }
   switch (typeof value) {
     case 'symbol':
       return String(value);
@@ -122,44 +158,4 @@ function prepareForTransmit<T>(
     default:
       return value;
   }
-}
-
-function publishReplayOnce<T>(source: Observable<T>) {
-  const noError = Symbol('nil');
-  let observer: Observer<T> | null = null;
-  const buffer: Array<T> = [];
-  let error: any = noError;
-  let complete = false;
-
-  function connect() {
-    return source.subscribe(
-      (value) => (observer ? observer.next(value) : buffer.push(value)),
-      (err) => (observer ? observer.error(err) : (error = err)),
-      () => (observer ? observer.complete() : (complete = true))
-    );
-  }
-
-  const result = new Observable<T>((obs) => {
-    buffer.forEach((v) => obs.next(v));
-    buffer.length = 0;
-    if (error !== noError) {
-      obs.error(error);
-    } else if (complete) {
-      obs.complete();
-    } else {
-      observer = obs;
-    }
-  }).pipe(
-    finalize(() => {
-      observer = null;
-      buffer.length = 0;
-      error = noError;
-      complete = false;
-    }),
-    share()
-  );
-
-  return Object.assign(result, {
-    connect,
-  });
 }

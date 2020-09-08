@@ -1,6 +1,5 @@
-import { createTabState, ActionHistory, TagState } from "./tabState"
-
-export type { ActionHistory, TagState }
+import { createTabState } from "./tabState"
+import { ActionHistory } from "rxjs-traces-devtools"
 
 const tabStates = {} as Record<string, ReturnType<typeof createTabState>>
 

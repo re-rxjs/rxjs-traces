@@ -1,6 +1,5 @@
 import { mergeWithKey } from "@josepot/rxjs-utils"
-import { shareLatest } from "react-rxjs"
-import { Observable, Subject } from "rxjs"
+import { Observable } from "rxjs"
 import {
   distinctUntilChanged,
   filter,
@@ -10,35 +9,38 @@ import {
   switchMap,
 } from "rxjs/operators"
 
-export const createTabState = () => {
-  const reset$ = new Subject<void>()
-
-  const newTag$ = new Subject<{
+export const connect = (input: {
+  reset$: Observable<void>
+  newTag$: Observable<{
     id: string
     label: string
-  }>()
-
-  const tagSubscription$ = new Subject<{
+  }>
+  tagSubscription$: Observable<{
     id: string
     sid: string
-  }>()
-
-  const tagUnsubscription$ = new Subject<{
+  }>
+  tagUnsubscription$: Observable<{
     id: string
     sid: string
-  }>()
-
-  const tagValueChange$ = new Subject<{
+  }>
+  tagValueChange$: Observable<{
     id: string
     sid: string
     value: any
-  }>()
-
-  const tagRefDetection$ = new Subject<{
+  }>
+  tagRefDetection$: Observable<{
     id: string
     ref: string
-  }>()
-
+  }>
+}) => {
+  const {
+    reset$,
+    newTag$,
+    tagSubscription$,
+    tagUnsubscription$,
+    tagValueChange$,
+    tagRefDetection$,
+  } = input
   const distinctTagRefDetection$ = reset$.pipe(
     startWith(undefined),
     switchMap(() =>
@@ -117,9 +119,7 @@ export const createTabState = () => {
         distinctUntilChanged(),
       ),
     ),
-    shareLatest(),
   )
-  tag$.subscribe()
 
   const action$ = mergeWithKey({
     tagSubscription$,
@@ -137,20 +137,11 @@ export const createTabState = () => {
         ),
       ),
     ),
-    shareLatest(),
   )
-  const subscription = actionHistory$.subscribe()
 
   return {
-    reset$,
-    newTag$,
-    tagSubscription$,
-    tagUnsubscription$,
-    tagValueChange$,
-    tagRefDetection$,
     tag$,
     actionHistory$,
-    dispose: () => subscription.unsubscribe(),
   }
 }
 
@@ -159,9 +150,7 @@ type ObservableValue<T extends Observable<any>> = T extends Observable<infer R>
   : never
 
 export type ActionHistory = ObservableValue<
-  ReturnType<typeof createTabState>["actionHistory$"]
+  ReturnType<typeof connect>["actionHistory$"]
 >
 
-export type TagState = ObservableValue<
-  ReturnType<typeof createTabState>["tag$"]
->
+export type TagState = ObservableValue<ReturnType<typeof connect>["tag$"]>

@@ -44,7 +44,9 @@ module.exports = {
 	},
 	module: {
 		rules: [
-			{ test: /\.(js|ts|tsx)?$/, loader: 'awesome-typescript-loader', exclude: /node_modules/ },
+			{
+				test: /\.(js|ts|tsx)?$/, loader: 'awesome-typescript-loader', exclude: /node_modules|(packages(\/|\\)(?!chrome-devtools).*)/
+			},
 			{
 				test: /\.css$/i,
 				use: ['style-loader', 'css-loader'],

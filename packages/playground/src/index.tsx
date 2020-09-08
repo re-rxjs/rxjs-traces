@@ -4,8 +4,10 @@ import "./index.css"
 import * as serviceWorker from "./serviceWorker"
 import { Observable } from "rxjs"
 import { patchObservable } from "rxjs-traces"
+import { connectStandalone } from "rxjs-traces-devtools"
 
 patchObservable(Observable)
+connectStandalone()
 
 const App = lazy(() => import("./App"))
 

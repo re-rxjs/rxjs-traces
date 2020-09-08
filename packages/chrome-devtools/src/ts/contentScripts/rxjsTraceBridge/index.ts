@@ -11,6 +11,8 @@ const requestMessages = () => {
   )
 }
 
+let historyReceived = false
+
 const handleMessage = (event: MessageEvent) => {
   const { data, origin } = event
 
@@ -20,15 +22,15 @@ const handleMessage = (event: MessageEvent) => {
 
   if (typeof data === "object" && data.source === "rxjs-traces") {
     if (data.type === "connected") {
-      chrome.runtime.sendMessage({
-        type: "reset",
-      })
+      historyReceived = false
       requestMessages()
+    } else if (!historyReceived && data.type === "event-history") {
+      historyReceived = true
+      data.payload.forEach((evt: any) => chrome.runtime.sendMessage(evt))
     } else {
-      chrome.runtime.sendMessage({
-        type: data.type,
-        payload: data.payload,
-      })
+      if (historyReceived) {
+        chrome.runtime.sendMessage(data)
+      }
     }
   }
 }
