@@ -15,9 +15,9 @@ import {
   takeUntil,
 } from "rxjs/operators"
 import { DataSet, EdgeOptions, NodeOptions } from "vis-network/standalone"
-import { incrementalHistory$, tagState$ } from "./messaging"
-import { skipResetBursts } from "./operators/incremental"
-import { scanMap } from "./operators/scanMap"
+import { incrementalHistory$, tagState$ } from "../messaging"
+import { skipResetBursts } from "../operators/incremental"
+import { scanMap } from "../operators/scanMap"
 
 export const filter$ = new BehaviorSubject("")
 
@@ -190,9 +190,9 @@ tagState$.subscribe((tags) => {
   }
 
   const existingIds = edges.getIds()
-  Object.values(tags).forEach((tag) => {
+  Object.values(tags).forEach((tag: any) => {
     const from = tag.id
-    tag.refs.forEach((to) => {
+    tag.refs.forEach((to: any) => {
       const id = `${from}->${to}`
       if (existingIds.includes(id)) return
       edges.add({

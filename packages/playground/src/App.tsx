@@ -1,20 +1,16 @@
+import { bind } from "@react-rxjs/core"
 import React from "react"
 import { ErrorBoundary, FallbackProps } from "react-error-boundary"
-import { bind } from "@react-rxjs/core"
 import { interval } from "rxjs"
 import { addDebugTag } from "rxjs-traces"
-import { map, startWith } from "rxjs/operators"
+import { DevTools } from "rxjs-traces-devtools"
+import "rxjs-traces-devtools/dist/bundle.css"
+import { startWith } from "rxjs/operators"
 import "./App.css"
 
 const stream = interval(2000).pipe(
   addDebugTag("interval"),
   startWith(0),
-  map((v, i) => {
-    if (i > 0 && i % 3 === 0) {
-      throw new Error("error")
-    }
-    return v
-  }),
   addDebugTag("result"),
 )
 
@@ -23,7 +19,7 @@ const [useStream] = bind(stream)
 const RandomComponent = () => {
   useStream()
 
-  return null
+  return <DevTools />
 }
 
 function ErrorFallback({

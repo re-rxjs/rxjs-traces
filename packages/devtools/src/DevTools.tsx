@@ -1,18 +1,20 @@
 import * as React from "react"
 import { useState } from "react"
-import ReactDOM from "react-dom"
-import { FilterBar } from "./FilterBar"
-import { copy$ } from "./messaging"
-import { TagOverlay } from "./TagOverlay"
-import { TimeTravelSlider } from "./TimeTravelSlider"
-import { Visualization } from "./Visualization"
+import {
+  FilterBar,
+  TagOverlay,
+  TimeTravelSlider,
+  Visualization,
+} from "./components"
 
 interface TagSelection {
   id: string
   x: number
   y: number
 }
-const App = () => {
+export const DevTools: React.FC<{
+  onCopy?: (value: string) => void
+}> = ({ onCopy = () => void 0 }) => {
   const [selectedTag, setSelectedTag] = useState<TagSelection | null>(null)
   const [filter, setFilter] = useState("")
 
@@ -29,12 +31,10 @@ const App = () => {
           id={selectedTag.id}
           initialX={selectedTag.x}
           initialY={selectedTag.y}
-          onCopy={(value) => copy$.next(value)}
+          onCopy={onCopy}
         />
       )}
       <TimeTravelSlider />
     </>
   )
 }
-
-ReactDOM.render(<App />, document.getElementById("popup-root"))

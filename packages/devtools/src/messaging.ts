@@ -1,52 +1,11 @@
-import { shareLatest } from "react-rxjs"
-import { BehaviorSubject, combineLatest, Observable, Subject } from "rxjs"
-import { filter, map, scan, share, startWith } from "rxjs/operators"
-import { ActionHistory, TagState } from "../background"
-import { deserialize } from "./deserialize"
+import { BehaviorSubject, combineLatest } from "rxjs"
+import { filter, map, scan, startWith } from "rxjs/operators"
 import { incremental } from "./operators/incremental"
+import { TagState, ActionHistory } from "connect"
 
-export const copy$ = new Subject<string>()
+export const actionHistory$ = new BehaviorSubject<ActionHistory>([])
 
-const backgroundScriptConnection$ = new Observable<{
-  actionHistory?: ActionHistory
-  tags?: TagState
-}>((obs) => {
-  var backgroundPageConnection = chrome.runtime.connect({
-    name: "devtools-page_" + chrome.devtools.inspectedWindow.tabId,
-  })
-
-  backgroundPageConnection.onMessage.addListener((message) => {
-    obs.next(deserialize(message))
-  })
-
-  const copySubscription = copy$.subscribe((payload) => {
-    backgroundPageConnection.postMessage({
-      type: "copy",
-      payload,
-    })
-  })
-
-  return () => {
-    backgroundPageConnection.disconnect()
-    copySubscription.unsubscribe()
-  }
-}).pipe(share())
-
-const actionHistory$ = backgroundScriptConnection$.pipe(
-  filter((v) => Boolean(v.actionHistory)),
-  map((v) => v.actionHistory!),
-  startWith([] as ActionHistory),
-  shareLatest(),
-)
-
-export const tagState$ = backgroundScriptConnection$.pipe(
-  filter((v) => Boolean(v.tags)),
-  map((v) => v.tags!),
-  startWith({} as TagState),
-  shareLatest(),
-)
-
-type Action = ActionHistory extends Array<infer R> ? R : never
+export const tagState$ = new BehaviorSubject<TagState>({})
 
 export const slice$ = new BehaviorSubject<number | null>(null)
 
@@ -59,7 +18,7 @@ export const incrementalHistory$ = combineLatest(actionHistory$, slice$).pipe(
 
 const tagValueReducer = (
   state: Record<string, any>,
-  action: Action,
+  action: ActionHistory extends Array<infer R> ? R : never,
 ): Record<string, any> => {
   switch (action.type) {
     case "tagSubscription$":
@@ -80,6 +39,7 @@ const tagValueReducer = (
       }
       return newValues
   }
+  return state
 }
 
 export const tagValue$ = (id: string) =>
