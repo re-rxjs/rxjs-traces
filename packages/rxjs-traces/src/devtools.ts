@@ -1,4 +1,4 @@
-import { merge } from 'rxjs';
+import { isObservable, merge } from 'rxjs';
 import { map, share } from 'rxjs/operators';
 import {
   newTag$,
@@ -91,14 +91,22 @@ export function initDevtools() {
       pastHistory.push({ type, payload });
     }
 
-    window.postMessage(
-      {
-        source: 'rxjs-traces',
-        type,
-        payload: prepareForTransmit(payload),
-      },
-      window.location.origin
-    );
+    try {
+      window.postMessage(
+        {
+          source: 'rxjs-traces',
+          type,
+          payload: prepareForTransmit(payload),
+        },
+        window.location.origin
+      );
+    } catch (ex) {
+      if (ex.name === 'DataCloneError') {
+        console.warn(`Can't transmit object to devtools`, payload, ex);
+      } else {
+        throw ex;
+      }
+    }
   });
 
   window.postMessage(
@@ -125,7 +133,7 @@ function prepareForTransmit<T>(
     if (ref === undefined) {
       return 'Symbol(GCed Object)';
     }
-    return prepareForTransmit(value, visitedValues);
+    return prepareForTransmit(ref, visitedValues);
   }
   switch (typeof value) {
     case 'symbol':
@@ -135,6 +143,20 @@ function prepareForTransmit<T>(
     case 'object':
       if (value === null) {
         return value;
+      }
+      if (isObservable(value)) {
+        return 'Symbol(Observable)';
+      }
+
+      if (value instanceof Map) {
+        return prepareForTransmit(
+          Array.from(value.entries()).map(([key, value]) => ({ key, value })),
+          visitedValues
+        );
+      }
+
+      if (value instanceof Set) {
+        return prepareForTransmit(Array.from(value.values()), visitedValues);
       }
 
       if (visitedValues.has(value)) {
@@ -155,6 +177,8 @@ function prepareForTransmit<T>(
           (result[key] = prepareForTransmit((value as any)[key], visitedValues))
       );
       return result;
+    case 'function':
+      return `Symbol(function ${value.name})`;
     default:
       return value;
   }
