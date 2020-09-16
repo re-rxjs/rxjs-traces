@@ -1,4 +1,4 @@
-import { defer, Observable } from 'rxjs';
+import { defer, Observable, isObservable, Subscription } from 'rxjs';
 import { finalize, tap } from 'rxjs/operators';
 import { v4 as uuid } from 'uuid';
 import {
@@ -36,8 +36,41 @@ export const addDebugTag = (label: string, id = label) => <T>(
       sid,
     });
 
+    let innerSubscription: Subscription | null = null;
     return source.pipe(
       tap((value) => {
+        if (innerSubscription) {
+          innerSubscription.unsubscribe();
+        }
+        if (value instanceof Map) {
+          const entries = Array.from(value.entries());
+          if (entries.length && entries.every(([, v]) => isObservable(v))) {
+            const latestValues = new Map();
+            let initialised = false;
+            innerSubscription = new Subscription();
+            entries.forEach(([key, observable]: [string, Observable<any>]) => {
+              innerSubscription?.add(
+                observable.subscribe((v) => {
+                  latestValues.set(key, v);
+                  if (initialised) {
+                    tagValueChange$.next({
+                      id,
+                      sid,
+                      value: latestValues,
+                    });
+                  }
+                })
+              );
+            });
+            initialised = true;
+            tagValueChange$.next({
+              id,
+              sid,
+              value: latestValues,
+            });
+            return;
+          }
+        }
         tagValueChange$.next({
           id,
           sid,

@@ -1,4 +1,4 @@
-import { merge } from 'rxjs';
+import { isObservable, merge } from 'rxjs';
 import { map, share } from 'rxjs/operators';
 import {
   newTag$,
@@ -91,14 +91,22 @@ export function initDevtools() {
       pastHistory.push({ type, payload });
     }
 
-    window.postMessage(
-      {
-        source: 'rxjs-traces',
-        type,
-        payload: prepareForTransmit(payload),
-      },
-      window.location.origin
-    );
+    try {
+      window.postMessage(
+        {
+          source: 'rxjs-traces',
+          type,
+          payload: prepareForTransmit(payload),
+        },
+        window.location.origin
+      );
+    } catch (ex) {
+      if (ex.name === 'DataCloneError') {
+        console.warn(`Can't transmit object to devtools`, payload);
+      } else {
+        throw ex;
+      }
+    }
   });
 
   window.postMessage(
@@ -136,6 +144,17 @@ function prepareForTransmit<T>(
       if (value === null) {
         return value;
       }
+      if (isObservable(value)) {
+        return 'Symbol(Observable)';
+      }
+
+      if (value instanceof Map) {
+        return prepareForTransmit(Array.from(value.entries()), visitedValues);
+      }
+
+      if (value instanceof Set) {
+        return prepareForTransmit(Array.from(value.values()), visitedValues);
+      }
 
       if (visitedValues.has(value)) {
         return visitedValues.get(value);
@@ -155,6 +174,8 @@ function prepareForTransmit<T>(
           (result[key] = prepareForTransmit((value as any)[key], visitedValues))
       );
       return result;
+    case 'function':
+      return `Symbol(function ${value.name})`;
     default:
       return value;
   }
