@@ -15,7 +15,7 @@ import {
 } from './metadata';
 
 const Patched = Symbol('patched');
-export const isPatched = (fn: object) => Boolean((fn as any)[Patched]);
+export const isPatched = (fn: object) => Boolean(fn && (fn as any)[Patched]);
 export const markAsPatched = (fn: object, patched = true) => {
   (fn as any)[Patched] = patched;
 };
@@ -155,7 +155,19 @@ export function patchObservable(ObservableCtor: typeof Observable) {
       },
     };
 
-    return callOriginalSubscribe(overridenThis, overridenObserver);
+    const subscription = callOriginalSubscribe(
+      overridenThis,
+      overridenObserver
+    );
+    subscription.add(() => {
+      // When new observables are created in different subscriptions (e.g. using a defer), reverseRefs
+      // start growing indefinetly for every subscribe. Here we clean them up when the current
+      // subscription finishes
+      metadata.refs.forEach((obs) => {
+        getMetadata(obs).reverseRefs.delete(this);
+      });
+    });
+    return subscription;
   };
   markAsPatched(ObservableCtor);
 

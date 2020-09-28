@@ -1,6 +1,6 @@
 import { Subject } from "rxjs"
 import { connect } from "./connect"
-import { actionHistory$, tagState$ } from "./messaging"
+import { action$, tagState$, reset$ as messagingReset$ } from "./messaging"
 
 export const connectStandalone = () => {
   const reset$ = new Subject<void>()
@@ -91,7 +91,8 @@ export const connectStandalone = () => {
     tagValueChange$,
     tagRefDetection$,
   })
-  streams.actionHistory$.subscribe(actionHistory$)
+  reset$.subscribe(messagingReset$)
+  streams.action$.subscribe(action$)
   streams.tag$.subscribe(tagState$)
 
   window.addEventListener("message", handleMessage, false)

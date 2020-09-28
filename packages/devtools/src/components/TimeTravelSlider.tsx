@@ -1,6 +1,6 @@
 import { FC, ChangeEvent } from "react"
 import { connectObservable } from "react-rxjs"
-import { historyLength$, slice$ } from "./messaging"
+import { historyLength$, slice$ } from "../messaging"
 import React from "react"
 import "./TimeTravelSlider.css"
 

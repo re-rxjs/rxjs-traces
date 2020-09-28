@@ -127,21 +127,9 @@ export const connect = (input: {
     tagValueChange$,
   })
 
-  const actionHistory$ = reset$.pipe(
-    startWith(undefined),
-    switchMap(() =>
-      action$.pipe(
-        scan(
-          (history, value) => [...history, value],
-          [] as ObservableValue<typeof action$>[],
-        ),
-      ),
-    ),
-  )
-
   return {
     tag$,
-    actionHistory$,
+    action$,
   }
 }
 
@@ -149,8 +137,6 @@ type ObservableValue<T extends Observable<any>> = T extends Observable<infer R>
   ? R
   : never
 
-export type ActionHistory = ObservableValue<
-  ReturnType<typeof connect>["actionHistory$"]
->
+export type Action = ObservableValue<ReturnType<typeof connect>["action$"]>
 
 export type TagState = ObservableValue<ReturnType<typeof connect>["tag$"]>

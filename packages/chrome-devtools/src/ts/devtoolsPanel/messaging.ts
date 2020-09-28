@@ -1,17 +1,19 @@
-import { Observable, Subject } from "rxjs"
+import { EMPTY, Observable, of, Subject } from "rxjs"
 import {
-  actionHistory$,
-  tagState$,
-  ActionHistory,
+  Action,
+  action$,
+  reset$,
   TagState,
+  tagState$,
 } from "rxjs-traces-devtools"
-import { filter, map, share, startWith } from "rxjs/operators"
+import { filter, map, mapTo, mergeMap, share, startWith } from "rxjs/operators"
 import { deserialize } from "./deserialize"
 
 export const copy$ = new Subject<string>()
 
 const backgroundScriptConnection$ = new Observable<{
-  actionHistory?: ActionHistory
+  action?: Action
+  actionHistory?: Action[]
   tags?: TagState
 }>((obs) => {
   var backgroundPageConnection = chrome.runtime.connect({
@@ -38,10 +40,17 @@ const backgroundScriptConnection$ = new Observable<{
 backgroundScriptConnection$
   .pipe(
     filter((v) => Boolean(v.actionHistory)),
-    map((v) => v.actionHistory!),
-    startWith([] as ActionHistory),
+    mapTo(void 0),
   )
-  .subscribe(actionHistory$)
+  .subscribe(reset$)
+
+backgroundScriptConnection$
+  .pipe(
+    mergeMap((v) =>
+      v.actionHistory ? v.actionHistory : v.action ? of(v.action) : EMPTY,
+    ),
+  )
+  .subscribe(action$)
 
 backgroundScriptConnection$
   .pipe(

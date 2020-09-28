@@ -1,6 +1,6 @@
 import { Subject } from "rxjs"
-import { connect } from "rxjs-traces-devtools"
-import { shareReplay } from "rxjs/operators"
+import { Action, connect } from "rxjs-traces-devtools"
+import { scan, shareReplay } from "rxjs/operators"
 
 export const createTabState = () => {
   const reset$ = new Subject<void>()
@@ -31,7 +31,7 @@ export const createTabState = () => {
     ref: string
   }>()
 
-  const { tag$, actionHistory$ } = connect({
+  const { tag$, action$ } = connect({
     reset$,
     newTag$,
     tagSubscription$,
@@ -41,7 +41,10 @@ export const createTabState = () => {
   })
 
   const tagReplay$ = tag$.pipe(shareReplay(1))
-  const historyReplay$ = actionHistory$.pipe(shareReplay(1))
+  const historyReplay$ = action$.pipe(
+    scan((history, action) => [...history, action], [] as Action[]),
+    shareReplay(1),
+  )
 
   const subscription = tagReplay$.subscribe()
   subscription.add(historyReplay$.subscribe())
@@ -54,6 +57,7 @@ export const createTabState = () => {
     tagValueChange$,
     tagRefDetection$,
     tag$: tagReplay$,
+    action$,
     actionHistory$: historyReplay$,
     dispose: () => subscription.unsubscribe(),
   }

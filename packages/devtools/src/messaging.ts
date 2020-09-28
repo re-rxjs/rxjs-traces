@@ -1,15 +1,31 @@
-import { BehaviorSubject, combineLatest } from "rxjs"
-import { filter, map, scan, startWith } from "rxjs/operators"
+import { shareLatest } from "@react-rxjs/core"
+import { collect, split } from "@react-rxjs/utils"
+import { Action, TagState } from "connect"
+import { BehaviorSubject, combineLatest, Subject } from "rxjs"
+import { filter, map, scan, share, startWith, switchMap } from "rxjs/operators"
 import { incremental } from "./operators/incremental"
-import { TagState, ActionHistory } from "connect"
 
-export const actionHistory$ = new BehaviorSubject<ActionHistory>([])
+export const reset$ = new Subject<void>()
+
+export const action$ = new Subject<Action>()
 
 export const tagState$ = new BehaviorSubject<TagState>({})
 
 export const slice$ = new BehaviorSubject<number | null>(null)
 
-export const incrementalHistory$ = combineLatest(actionHistory$, slice$).pipe(
+const actionHistory$ = reset$.pipe(
+  startWith(undefined),
+  switchMap(() =>
+    action$.pipe(
+      scan((history, action) => [...history, action], [] as Action[]),
+      startWith([]),
+    ),
+  ),
+  shareLatest(),
+)
+actionHistory$.subscribe()
+
+export const incrementalHistory$ = combineLatest([actionHistory$, slice$]).pipe(
   map(([history, index]) =>
     index === null ? history : history.slice(0, index),
   ),
@@ -18,7 +34,7 @@ export const incrementalHistory$ = combineLatest(actionHistory$, slice$).pipe(
 
 const tagValueReducer = (
   state: Record<string, any>,
-  action: ActionHistory extends Array<infer R> ? R : never,
+  action: Action,
 ): Record<string, any> => {
   switch (action.type) {
     case "tagSubscription$":
@@ -42,26 +58,35 @@ const tagValueReducer = (
   return state
 }
 
-export const tagValue$ = (id: string) =>
-  incrementalHistory$.pipe(
-    filter((action) => {
-      if (action.type === "reset") {
-        return true
-      }
-      const { type, payload } = action.payload
-      const interestingTypes: typeof type[] = [
-        "tagSubscription$",
-        "tagUnsubscription$",
-        "tagValueChange$",
-      ]
-      return payload.id === id && interestingTypes.includes(type)
-    }),
-    scan((state, action) => {
-      if (action.type === "reset") {
-        return {}
-      }
-      return tagValueReducer(state, action.payload)
-    }, {} as Record<string, any>),
+const incrementReset$ = incrementalHistory$.pipe(
+  filter((inc) => inc.type === "reset"),
+  share(),
+)
+
+export const tagValue$ = incrementReset$.pipe(
+  switchMap(() =>
+    incrementalHistory$.pipe(
+      filter((increment) => increment.type === "incremental"),
+      map((increment) => {
+        if (increment.type !== "incremental") {
+          throw null
+        }
+        return increment.payload
+      }),
+      split(
+        (action) => action.payload.id,
+        (action$) => action$.pipe(scan(tagValueReducer, {})),
+      ),
+      collect(),
+    ),
+  ),
+  shareLatest(),
+)
+
+export const tagValueById$ = (id: string) =>
+  tagValue$.pipe(
+    filter((groups) => groups.has(id)),
+    switchMap((groups) => groups.get(id)!),
   )
 
 export const tagInfo$ = (id: string) => tagState$.pipe(map((v) => v[id]))

@@ -1,25 +1,36 @@
-import { bind } from "@react-rxjs/core"
-import React from "react"
+import { bind, SUSPENSE } from "@react-rxjs/core"
+import React, { Suspense } from "react"
 import { ErrorBoundary, FallbackProps } from "react-error-boundary"
-import { interval } from "rxjs"
+import { interval, merge, Observable } from "rxjs"
 import { addDebugTag } from "rxjs-traces"
 import { DevTools } from "rxjs-traces-devtools"
 import "rxjs-traces-devtools/dist/bundle.css"
-import { startWith } from "rxjs/operators"
+import { map, startWith, take } from "rxjs/operators"
 import "./App.css"
 
-const stream = interval(2000).pipe(
+const auto$ = interval(0).pipe(take(102))
+
+const manual$ = new Observable<number>((obs) => {
+  let i = 502
+  ;(window as any).bump = () => obs.next(i++)
+  return () => ((window as any).bump = null)
+})
+
+const stream = merge(auto$, manual$).pipe(
   addDebugTag("interval"),
   startWith(0),
+  map((v) => (v % 3 === 0 ? v : SUSPENSE)),
   addDebugTag("result"),
 )
 
 const [useStream] = bind(stream)
 
 const RandomComponent = () => {
-  useStream()
+  // const value = useStream()
+  // return <div>{value}</div>
 
-  return <DevTools />
+  useStream()
+  return null
 }
 
 function ErrorFallback({
@@ -41,8 +52,11 @@ function App() {
   return (
     <div className="App">
       <ErrorBoundary FallbackComponent={ErrorFallback}>
-        <RandomComponent />
+        <Suspense fallback={null}>
+          <RandomComponent />
+        </Suspense>
       </ErrorBoundary>
+      <DevTools />
     </div>
   )
 }

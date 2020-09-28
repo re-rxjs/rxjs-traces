@@ -1,6 +1,5 @@
-import { BehaviorSubject, combineLatest as cL, from, timer } from "rxjs"
+import { BehaviorSubject, combineLatest, from, timer } from "rxjs"
 import {
-  combineLatest,
   concatMap,
   debounceTime,
   distinctUntilChanged,
@@ -15,7 +14,7 @@ import {
   takeUntil,
 } from "rxjs/operators"
 import { DataSet, EdgeOptions, NodeOptions } from "vis-network/standalone"
-import { incrementalHistory$, tagState$ } from "../messaging"
+import { incrementalHistory$, tagState$, tagValueById$ } from "../messaging"
 import { skipResetBursts } from "../operators/incremental"
 import { scanMap } from "../operators/scanMap"
 
@@ -78,6 +77,10 @@ const createNodeWatch = (id: string, label: string) => {
     switchMapTo(highlightSequence$),
   )
 
+  const suspenseHit$ = tagValueById$(id).pipe(
+    map((value) => Object.values(value).includes("Symbol(SUSPENSE)")),
+  )
+
   const filterHit$ = filter$.pipe(
     takeUntil(tagRemoved$),
     map(
@@ -87,10 +90,10 @@ const createNodeWatch = (id: string, label: string) => {
     ),
   )
 
-  // If filterHit = true, color = filterHit. Otherwise, default color / flashing
-  const color$ = cL(filterHit$, highlight$).pipe(
-    map(([filter, highlight$]) => {
-      if (filter) {
+  // If filterHit or suspenseHit = true, color = filterHit. Otherwise, default color / flashing
+  const color$ = combineLatest([filterHit$, suspenseHit$, highlight$]).pipe(
+    map(([filter, suspense, highlight$]) => {
+      if (filter || suspense) {
         return nodeColors.filterHit
       }
       return highlight$
@@ -98,9 +101,10 @@ const createNodeWatch = (id: string, label: string) => {
     startWith(nodeColors.default),
   )
 
-  const nodeChange$ = sharedIncrementalHistory$.pipe(
-    takeUntil(tagRemoved$),
-    combineLatest(color$),
+  const nodeChange$ = combineLatest([
+    sharedIncrementalHistory$.pipe(takeUntil(tagRemoved$)),
+    color$,
+  ]).pipe(
     scanMap((activeSubscriptions, [action, targetColor]) => {
       if (action.type === "reset") {
         activeSubscriptions.clear()

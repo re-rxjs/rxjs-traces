@@ -1,5 +1,6 @@
 import { createTabState } from "./tabState"
-import { ActionHistory } from "rxjs-traces-devtools"
+import { Action } from "rxjs-traces-devtools"
+import { take } from "rxjs/operators"
 
 const tabStates = {} as Record<string, ReturnType<typeof createTabState>>
 
@@ -40,11 +41,22 @@ chrome.runtime.onConnect.addListener(function (devToolsConnection) {
       tags: value,
     }),
   )
-  const actionHistorySub = tabStates[toolsTabId].actionHistory$.subscribe(
-    (value: ActionHistory) =>
+  tabStates[toolsTabId].actionHistory$
+    .pipe(take(1))
+    .subscribe((value: Action[]) =>
       devToolsConnection.postMessage({
         actionHistory: value,
       }),
+    )
+  const resetSub = tabStates[toolsTabId].reset$.subscribe(() =>
+    devToolsConnection.postMessage({
+      actionHistory: [],
+    }),
+  )
+  const actionSub = tabStates[toolsTabId].action$.subscribe((value: Action) =>
+    devToolsConnection.postMessage({
+      action: value,
+    }),
   )
 
   devToolsConnection.onMessage.addListener((message) => {
@@ -67,6 +79,7 @@ chrome.runtime.onConnect.addListener(function (devToolsConnection) {
 
   devToolsConnection.onDisconnect.addListener(function () {
     tagsSub.unsubscribe()
-    actionHistorySub.unsubscribe()
+    resetSub.unsubscribe()
+    actionSub.unsubscribe()
   })
 })
