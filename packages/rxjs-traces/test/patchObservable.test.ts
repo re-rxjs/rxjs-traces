@@ -5,6 +5,7 @@ import {
   catchError,
   concatMap,
   delay,
+  endWith,
   map,
   publish,
   scan,
@@ -18,8 +19,8 @@ import {
 } from 'rxjs/operators';
 import { addDebugTag, patchObservable, tagValue$ } from '../src';
 import { resetTag$ } from '../src/changes';
-import { restoreObservable } from '../src/patchObservable';
 import { findTagRefs } from '../src/metadata';
+import { restoreObservable } from '../src/patchObservable';
 
 afterEach(() => {
   resetTag$();
@@ -372,6 +373,28 @@ describe('patchObservable', () => {
 
       expect(tags.result.refs).toEqual(['merged']);
       expect(tags.merged.refs).toEqual(['result', 'source']);
+      expect(tags.source.refs).toEqual([]);
+    });
+
+    it('references up to the parent with multiple subscriptions', async () => {
+      const stream = of(1).pipe(
+        addDebugTag('source'),
+        addDebugTag('middle'),
+        endWith(5),
+        addDebugTag('result')
+      );
+      stream.subscribe();
+      const tags = await stream
+        .pipe(
+          takeLast(1),
+          delay(0),
+          withLatestFrom(tagValue$),
+          map(([_, tags]) => tags)
+        )
+        .toPromise();
+
+      expect(tags.result.refs).toEqual(['middle']);
+      expect(tags.middle.refs).toEqual(['source']);
       expect(tags.source.refs).toEqual([]);
     });
   });

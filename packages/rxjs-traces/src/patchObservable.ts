@@ -10,13 +10,15 @@ import {
 import {
   detectRefChanges,
   findReverseTagRefs,
-  getMetadata,
   findTagRefs,
+  getMetadata,
 } from './metadata';
 
 const Patched = Symbol('patched');
-export const isPatched = (ObservableCtor: Function) =>
-  Boolean((ObservableCtor as any)[Patched]);
+export const isPatched = (fn: object) => Boolean((fn as any)[Patched]);
+export const markAsPatched = (fn: object, patched = true) => {
+  (fn as any)[Patched] = patched;
+};
 
 const originalSubscribe = Observable.prototype.subscribe as <T>(
   observer: Observer<T>
@@ -60,8 +62,8 @@ export function patchObservable(ObservableCtor: typeof Observable) {
 
     let overridenThis = this;
     if (
-      !metadata.patched &&
-      this._subscribe !== Observable.prototype._subscribe
+      this._subscribe !== Observable.prototype._subscribe &&
+      !isPatched(this._subscribe)
     ) {
       const patched_subscribe: (
         subscriber: Subscriber<any>
@@ -72,6 +74,7 @@ export function patchObservable(ObservableCtor: typeof Observable) {
           observableStack.pop();
           return result;
         }, [this]);
+      markAsPatched(patched_subscribe);
       overridenThis = Object.create(overridenThis, {
         _subscribe: {
           value: patched_subscribe,
@@ -79,7 +82,7 @@ export function patchObservable(ObservableCtor: typeof Observable) {
       });
     }
 
-    if (!metadata.patched && this.operator) {
+    if (this.operator && !isPatched(this.operator)) {
       const patchedOperator: Operator<any, T> = {
         call: (subscriber, source) =>
           detectRefChanges(() => {
@@ -89,6 +92,7 @@ export function patchObservable(ObservableCtor: typeof Observable) {
             return teardown;
           }, [this]),
       };
+      markAsPatched(patchedOperator);
       overridenThis = Object.create(overridenThis, {
         operator: {
           value: patchedOperator,
@@ -151,16 +155,15 @@ export function patchObservable(ObservableCtor: typeof Observable) {
       },
     };
 
-    metadata.patched = true;
     return callOriginalSubscribe(overridenThis, overridenObserver);
   };
-  (ObservableCtor as any)[Patched] = true;
+  markAsPatched(ObservableCtor);
 
   globalThis.addEventListener('error', onUncaughtException);
 }
 export function restoreObservable(ObservableCtor: typeof Observable) {
   ObservableCtor.prototype.subscribe = originalSubscribe as typeof ObservableCtor.prototype.subscribe;
-  (ObservableCtor as any)[Patched] = false;
+  markAsPatched(ObservableCtor, false);
 
   globalThis.removeEventListener('error', onUncaughtException);
 }

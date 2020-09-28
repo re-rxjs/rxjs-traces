@@ -72,6 +72,18 @@ declare class WeakRef<T extends object> {
   deref(): T | undefined;
 }
 
+// For test environment
+if (!(window as any).WeakRef) {
+  console.warn(
+    "Environment doesn't support WeakRef - rxjs-traces won't be able to track objects"
+  );
+}
+const WeakRefCtor: typeof WeakRef =
+  (window as any).WeakRef ||
+  function NotWeakRef<T extends object>(this: WeakRef<T>) {
+    this.deref = () => undefined;
+  };
+
 export function initDevtools() {
   eventHistory$.subscribe(({ type, payload }) => {
     const value = (payload as any).value;
@@ -84,7 +96,7 @@ export function initDevtools() {
         type,
         payload: {
           payload,
-          value: new WeakRef(value),
+          value: new WeakRefCtor(value),
         },
       });
     } else {
@@ -128,7 +140,7 @@ function prepareForTransmit<T>(
   value: T,
   visitedValues = new WeakMap<any, any>()
 ): any {
-  if (value instanceof WeakRef) {
+  if (value instanceof WeakRefCtor) {
     const ref = value.deref();
     if (ref === undefined) {
       return 'Symbol(GCed Object)';

@@ -1,13 +1,13 @@
 import React, { FC, RefObject, useEffect, useRef, useState } from "react"
 import "./TagOverlay.css"
 import { connectFactoryObservable } from "react-rxjs"
-import { tagInfo$, tagValue$ } from "./messaging"
+import { tagInfo$, tagValue$ } from "../messaging"
 import { combineLatest } from "rxjs"
 import { map } from "rxjs/operators"
 import { DebugTag } from "rxjs-traces"
 
 const [useTag] = connectFactoryObservable((id: string) =>
-  combineLatest(tagInfo$(id), tagValue$(id)).pipe(
+  combineLatest([tagInfo$(id), tagValue$(id)]).pipe(
     map(
       ([info, latestValues]): DebugTag => ({
         id: info.id,

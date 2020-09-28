@@ -2,7 +2,6 @@ import { Observable } from 'rxjs';
 import { tagRefDetection$ } from './changes';
 
 interface ObservableMetadata {
-  patched: boolean;
   tag: string | null;
   refs: Set<Observable<unknown>>;
 
@@ -24,7 +23,6 @@ export const getMetadata = (
 ): ObservableMetadata => {
   if (!hasMetadata(observable)) {
     const defaultMetadata: ObservableMetadata = {
-      patched: false,
       tag: null,
       refs: new Set(),
       reverseRefs: new Set(),
