@@ -26,6 +26,8 @@
     "rollup-plugin-css-only": "^2.1.0"
   },
   "dependencies": {
+    "@react-rxjs/core": "^0.4.3",
+    "@react-rxjs/utils": "^0.3.0",
     "rxjs-traces": "0.1.0-alpha.10"
   }
 }

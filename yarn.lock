@@ -1457,6 +1457,16 @@
   resolved "https://registry.yarnpkg.com/@react-rxjs/core/-/core-0.2.0.tgz#3261a67d285698e64cbf167e1b5691226dfc1b61"
   integrity sha512-95xlW/g3ccJLHmtUK8qT6BZN1pc+Hw067ZcyMAWQa1dvzGXhYKdTElQIvlDnvRG+OEjCO6yhNLqBOCy1sU9oBQ==
 
+"@react-rxjs/core@^0.4.3":
+  version "0.4.3"
+  resolved "https://registry.yarnpkg.com/@react-rxjs/core/-/core-0.4.3.tgz#3cd75ce29558ab5e4051d790eb804124db931e13"
+  integrity sha512-BeNeMTJbo49SWRKEjnqw8ehSdLFhLPKW0FgpBQlV/eymc9oYEPfXjOQWuDEImmtKY3MkNtwVa/Hf5atNh+Zeow==
+
+"@react-rxjs/utils@^0.3.0":
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/@react-rxjs/utils/-/utils-0.3.0.tgz#1fe49d9fe581ce3b00bad12512a222c8f342f16a"
+  integrity sha512-cJwSuxUnnbAkliBlxsbu414El2IVIJrrnXcIKYBQvNllcLZJpNUKKosW1GedoO1fHD5HKwDSnllBW7O1jCAMHQ==
+
 "@rollup/plugin-commonjs@^11.0.0":
   version "11.1.0"
   resolved "https://registry.yarnpkg.com/@rollup/plugin-commonjs/-/plugin-commonjs-11.1.0.tgz#60636c7a722f54b41e419e1709df05c7234557ef"
@@ -10633,6 +10643,13 @@ rxjs-report-usage@^1.0.4:
     chalk "~4.1.0"
     glob "~7.1.6"
     prompts "~2.3.2"
+
+rxjs-traces@0.1.0-alpha.10:
+  version "0.1.0-alpha.10"
+  resolved "https://registry.yarnpkg.com/rxjs-traces/-/rxjs-traces-0.1.0-alpha.10.tgz#7a31bceb465640365d38cdd1cdad05ba322f2d95"
+  integrity sha512-vjITEWpdVnKNRtG1ltmyhMjtFjWuuWoytEifb3PeiB0H3cZNNiJfehosXTB6Hb7qH7bXGqYGO4PX4DB6y3nw6Q==
+  dependencies:
+    uuid "^8.2.0"
 
 rxjs@^6.5.3, rxjs@^6.6.0:
   version "6.6.0"

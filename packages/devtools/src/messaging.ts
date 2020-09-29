@@ -64,6 +64,7 @@ const incrementReset$ = incrementalHistory$.pipe(
 )
 
 export const tagValue$ = incrementReset$.pipe(
+  startWith(null),
   switchMap(() =>
     incrementalHistory$.pipe(
       filter((increment) => increment.type === "incremental"),
