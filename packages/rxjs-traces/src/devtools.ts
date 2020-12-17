@@ -95,7 +95,7 @@ export function initDevtools() {
       pastHistory.push({
         type,
         payload: {
-          payload,
+          ...payload,
           value: new WeakRefCtor(value),
         },
       });
@@ -191,6 +191,8 @@ function prepareForTransmit<T>(
       return result;
     case 'function':
       return `Symbol(function ${value.name})`;
+    case 'bigint':
+      return value.toString() + 'n';
     default:
       return value;
   }
