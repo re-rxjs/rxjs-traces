@@ -11,7 +11,7 @@ import { getMetadata } from './metadata';
 import { isPatched } from './patchObservable';
 
 let warningShown = false;
-export const addDebugTag = (label: string, id = label) => <T>(
+export const addDebugTag = <T>(label: string, id = label) => (
   source: Observable<T>
 ) => {
   newTag$.next({

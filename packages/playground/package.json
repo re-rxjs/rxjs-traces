@@ -15,9 +15,8 @@
     "react-dom": "^16.13.1",
     "react-error-boundary": "^2.3.1",
     "react-scripts": "3.4.1",
-    "rxjs": "^6.6.0",
-    "rxjs-traces": "^0.1.0-alpha.1",
-    "typescript": "~3.7.2"
+    "rxjs": "^7.0.0",
+    "rxjs-traces": "^0.1.0-alpha.1"
   },
   "scripts": {
     "start": "react-scripts start",

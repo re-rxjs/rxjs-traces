@@ -1,11 +1,5 @@
-import { merge, Observable, ReplaySubject, Subject } from 'rxjs';
-import {
-  distinctUntilChanged,
-  map,
-  publish,
-  scan,
-  startWith,
-} from 'rxjs/operators';
+import { connectable, merge, Observable, ReplaySubject, Subject } from 'rxjs';
+import { distinctUntilChanged, map, scan, startWith } from 'rxjs/operators';
 
 export const newTag$ = new ReplaySubject<{
   id: string;
@@ -57,7 +51,7 @@ const mergeReducer = <T>(
     distinctUntilChanged()
   );
 
-export const tagValue$: Observable<Record<string, DebugTag>> = mergeReducer<
+const _tagValue$: Observable<Record<string, DebugTag>> = mergeReducer<
   Record<string, DebugTag>
 >(
   {},
@@ -134,8 +128,9 @@ export const tagValue$: Observable<Record<string, DebugTag>> = mergeReducer<
   tagUnsubscription$,
   tagValueChange$,
   tagRefDetection$
-).pipe(publish());
-(tagValue$ as any).connect();
+);
+export const tagValue$ = connectable(_tagValue$);
+tagValue$.connect();
 
 // Internal (just to reset tests);
 export const resetTag$ = () => tagReset$.next();

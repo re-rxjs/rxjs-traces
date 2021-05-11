@@ -2,7 +2,6 @@ import {
   Observable,
   Observer,
   Operator,
-  PartialObserver,
   Subscriber,
   Subscription,
   TeardownLogic,
@@ -36,10 +35,10 @@ const observableStack: Array<Observable<unknown>[]> = [];
 export function patchObservable(ObservableCtor: typeof Observable) {
   ObservableCtor.prototype.subscribe = function <T>(
     this: Observable<T>,
-    observerOrNext?: PartialObserver<T> | ((value: T) => void) | null,
+    observerOrNext?: Partial<Observer<T>> | ((value: T) => void) | null,
     error?: ((error: any) => void) | null,
     complete?: (() => void) | null
-  ) {
+  ): Subscription {
     const metadata = getMetadata(this);
     const observerArg = getObserver(observerOrNext, error, complete);
     const observer = addErrorDetection(observerArg, this, metadata.tag);
@@ -62,15 +61,15 @@ export function patchObservable(ObservableCtor: typeof Observable) {
 
     let overridenThis = this;
     if (
-      this._subscribe !== Observable.prototype._subscribe &&
-      !isPatched(this._subscribe)
+      (this as any)._subscribe !== (Observable.prototype as any)._subscribe &&
+      !isPatched((this as any)._subscribe)
     ) {
       const patched_subscribe: (
         subscriber: Subscriber<any>
       ) => TeardownLogic = (subscriber) =>
         detectRefChanges(() => {
           observableStack.push([this]);
-          const result = this._subscribe(subscriber);
+          const result = (this as any)._subscribe(subscriber);
           observableStack.pop();
           return result;
         }, [this]);
@@ -87,7 +86,7 @@ export function patchObservable(ObservableCtor: typeof Observable) {
         call: (subscriber, source) =>
           detectRefChanges(() => {
             observableStack.push([this]);
-            const teardown = this.operator.call(subscriber, source);
+            const teardown = this.operator?.call(subscriber, source);
             observableStack.pop();
             return teardown;
           }, [this]),
@@ -112,8 +111,7 @@ export function patchObservable(ObservableCtor: typeof Observable) {
       });
     }
 
-    const overridenObserver: Observer<T> = {
-      ...observer,
+    let overridenObserver: Observer<T> = {
       complete: () => {
         /** Case concat: When a source completes, it synchronously causes
          * a subscription to fire of. So we set the child of `this` to be the
@@ -153,7 +151,12 @@ export function patchObservable(ObservableCtor: typeof Observable) {
           observer.next(value);
         }
       },
+      error: (err) => observer.error(err),
     };
+    if (observer instanceof Subscriber) {
+      overridenObserver = new Subscriber(overridenObserver);
+      observer.add(overridenObserver as Subscriber<any>);
+    }
 
     const subscription = callOriginalSubscribe(
       overridenThis,
@@ -181,10 +184,14 @@ export function restoreObservable(ObservableCtor: typeof Observable) {
 }
 
 function getObserver<T>(
-  observerOrNext?: PartialObserver<T> | ((value: T) => void) | null,
+  observerOrNext?: Partial<Observer<T>> | ((value: T) => void) | null,
   error?: ((error: any) => void) | null,
   complete?: (() => void) | null
 ): Observer<T> {
+  if (observerOrNext && observerOrNext instanceof Subscriber) {
+    return observerOrNext;
+  }
+
   return {
     next: (value) => {
       if (typeof observerOrNext === 'function') {
@@ -251,8 +258,8 @@ function addErrorDetection<T>(
   source: Observable<T>,
   name: string | null
 ): Observer<T> {
-  const result: Observer<T> = {
-    next: (value) => {
+  let result = {
+    next: (value: T) => {
       try {
         observer.next(value);
       } catch (err) {
@@ -264,7 +271,7 @@ function addErrorDetection<T>(
         throw err;
       }
     },
-    error: (err) => {
+    error: (err: any) => {
       if (name && err instanceof Error) {
         const enhancedError = err as EnhancedError;
         if (source && !enhancedError.source) {
@@ -275,8 +282,13 @@ function addErrorDetection<T>(
       }
       observer.error(err);
     },
-    complete: observer.complete,
+    complete: () => observer.complete(),
   };
+  if (observer instanceof Subscriber) {
+    result = new Subscriber(result);
+    observer.add(result as Subscriber<any>);
+  }
+
   if (name) {
     Object.defineProperty(result.next, 'name', {
       value: `DebugTag(--------> ${name} <--------).next`,

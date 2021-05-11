@@ -3,6 +3,8 @@
   "compilerOptions": {
     "module": "esnext",
     "lib": ["dom", "esnext"],
+    "skipLibCheck": true,
+    "noEmit": true,
     "importHelpers": true,
     "declaration": true,
     "sourceMap": true,

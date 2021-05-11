@@ -1,5 +1,14 @@
 import { shareLatest } from '@react-rxjs/core';
-import { concat, defer, from, interval, merge, Observable, of } from 'rxjs';
+import {
+  concat,
+  connectable,
+  defer,
+  from,
+  interval,
+  merge,
+  Observable,
+  of,
+} from 'rxjs';
 import { marbles } from 'rxjs-marbles/jest';
 import {
   catchError,
@@ -7,7 +16,6 @@ import {
   delay,
   endWith,
   map,
-  publish,
   scan,
   share,
   startWith,
@@ -87,8 +95,8 @@ describe('patchObservable', () => {
         const source = m.cold<string>('-a-b-c-|');
         const expected = '             -a-b-c-|)';
 
-        const stream = source.pipe(publish());
-        (stream as any).connect();
+        const stream = connectable(source);
+        stream.connect();
 
         m.expect(stream).toBeObservable(expected);
         m.expect(stream).toBeObservable(expected);
