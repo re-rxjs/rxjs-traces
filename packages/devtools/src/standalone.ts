@@ -1,10 +1,8 @@
 import { Subject } from "rxjs"
 import { connect } from "./connect"
-import { action$, tagState$, reset$ as messagingReset$ } from "./messaging"
+import { action$, tagState$ } from "./messaging"
 
 export const connectStandalone = () => {
-  const reset$ = new Subject<void>()
-
   const newTag$ = new Subject<{
     id: string
     label: string
@@ -32,7 +30,6 @@ export const connectStandalone = () => {
   }>()
 
   const requestMessages = () => {
-    reset$.next()
     window.postMessage(
       {
         source: "rxjs-traces-devtools",
@@ -52,24 +49,21 @@ export const connectStandalone = () => {
 
     function consumeEvent(evt: any) {
       switch (evt.type) {
-        case "reset":
-          return reset$.next(evt.payload)
-        case "new-tag":
+        case "newTag$":
           return newTag$.next(evt.payload)
-        case "tag-subscription":
+        case "tagSubscription$":
           return tagSubscription$.next(evt.payload)
-        case "tag-unsubscription":
+        case "tagUnsubscription$":
           return tagUnsubscription$.next(evt.payload)
-        case "tag-value-change":
+        case "tagValueChange$":
           return tagValueChange$.next(evt.payload)
-        case "tag-ref-detection":
+        case "tagRefDetection$":
           return tagRefDetection$.next(evt.payload)
       }
     }
 
     if (typeof data === "object" && data.source === "rxjs-traces") {
       if (data.type === "connected") {
-        reset$.next()
         historyReceived = false
         requestMessages()
       } else if (!historyReceived && data.type === "event-history") {
@@ -84,14 +78,12 @@ export const connectStandalone = () => {
   }
 
   const streams = connect({
-    reset$,
     newTag$,
     tagSubscription$,
     tagUnsubscription$,
     tagValueChange$,
     tagRefDetection$,
   })
-  reset$.subscribe(messagingReset$)
   streams.action$.subscribe(action$)
   streams.tag$.subscribe(tagState$)
 

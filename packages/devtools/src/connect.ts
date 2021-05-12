@@ -1,16 +1,8 @@
-import { mergeWithKey } from "@josepot/rxjs-utils"
+import { mergeWithKey } from "@react-rxjs/utils"
 import { Observable } from "rxjs"
-import {
-  distinctUntilChanged,
-  filter,
-  map,
-  scan,
-  startWith,
-  switchMap,
-} from "rxjs/operators"
+import { distinctUntilChanged, filter, map, scan } from "rxjs/operators"
 
 export const connect = (input: {
-  reset$: Observable<void>
   newTag$: Observable<{
     id: string
     label: string
@@ -34,42 +26,36 @@ export const connect = (input: {
   }>
 }) => {
   const {
-    reset$,
     newTag$,
     tagSubscription$,
     tagUnsubscription$,
     tagValueChange$,
     tagRefDetection$,
   } = input
-  const distinctTagRefDetection$ = reset$.pipe(
-    startWith(undefined),
-    switchMap(() =>
-      tagRefDetection$.pipe(
-        scan(
-          (acc, newRef) => {
-            const { id, ref } = newRef
-            if (id in acc.refs && acc.refs[id].has(ref)) {
-              return {
-                refs: acc.refs,
-                newRef: null,
-              }
-            }
-            acc.refs[id] = acc.refs[id] || new Set()
-            acc.refs[id].add(ref)
-            return {
-              refs: acc.refs,
-              newRef,
-            }
-          },
-          {
-            refs: {} as Record<string, Set<string>>,
-            newRef: null as null | { id: string; ref: string },
-          },
-        ),
-        map((v) => v.newRef!),
-        filter((v) => !!v),
-      ),
+  const distinctTagRefDetection$ = tagRefDetection$.pipe(
+    scan(
+      (acc, newRef) => {
+        const { id, ref } = newRef
+        if (id in acc.refs && acc.refs[id].has(ref)) {
+          return {
+            refs: acc.refs,
+            newRef: null,
+          }
+        }
+        acc.refs[id] = acc.refs[id] || new Set()
+        acc.refs[id].add(ref)
+        return {
+          refs: acc.refs,
+          newRef,
+        }
+      },
+      {
+        refs: {} as Record<string, Set<string>>,
+        newRef: null as null | { id: string; ref: string },
+      },
     ),
+    map((v) => v.newRef!),
+    filter((v) => !!v),
   )
 
   const stateAction$ = mergeWithKey({
@@ -77,48 +63,43 @@ export const connect = (input: {
     tagRefDetection$: distinctTagRefDetection$,
   })
 
-  const tag$ = reset$.pipe(
-    startWith(undefined),
-    switchMap(() =>
-      stateAction$.pipe(
-        scan(
-          (tags, action) => {
-            const { id } = action.payload
-            if (action.type === "newTag$") {
-              return id in tags
-                ? tags
-                : {
-                    ...tags,
-                    [id]: {
-                      ...action.payload,
-                      refs: [],
-                    },
-                  }
-            }
-            const { ref } = action.payload
-            if (!(id in tags) || tags[id].refs.includes(ref)) {
-              return tags
-            }
-            return {
-              ...tags,
-              [id]: {
-                ...tags[id],
-                refs: [...tags[id].refs, ref],
-              },
-            }
+  const tag$ = stateAction$.pipe(
+    scan(
+      (tags, action) => {
+        const { id } = action.payload
+        if (action.type === "newTag$") {
+          return id in tags
+            ? tags
+            : {
+                ...tags,
+                [id]: {
+                  ...action.payload,
+                  refs: [],
+                },
+              }
+        }
+        const { ref } = action.payload
+        if (!(id in tags) || tags[id].refs.includes(ref)) {
+          return tags
+        }
+        return {
+          ...tags,
+          [id]: {
+            ...tags[id],
+            refs: [...tags[id].refs, ref],
           },
-          {} as Record<
-            string,
-            {
-              id: string
-              label: string
-              refs: string[]
-            }
-          >,
-        ),
-        distinctUntilChanged(),
-      ),
+        }
+      },
+      {} as Record<
+        string,
+        {
+          id: string
+          label: string
+          refs: string[]
+        }
+      >,
     ),
+    distinctUntilChanged(),
   )
 
   const action$ = mergeWithKey({

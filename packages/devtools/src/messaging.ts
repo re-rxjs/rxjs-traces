@@ -5,22 +5,15 @@ import { BehaviorSubject, combineLatest, Subject } from "rxjs"
 import { filter, map, scan, share, startWith, switchMap } from "rxjs/operators"
 import { incremental } from "./operators/incremental"
 
-export const reset$ = new Subject<void>()
-
 export const action$ = new Subject<Action>()
 
 export const tagState$ = new BehaviorSubject<TagState>({})
 
 export const slice$ = new BehaviorSubject<number | null>(null)
 
-const actionHistory$ = reset$.pipe(
-  startWith(undefined),
-  switchMap(() =>
-    action$.pipe(
-      scan((history, action) => [...history, action], [] as Action[]),
-      startWith([]),
-    ),
-  ),
+const actionHistory$ = action$.pipe(
+  scan((history, action) => [...history, action], [] as Action[]),
+  startWith([]),
   shareLatest(),
 )
 actionHistory$.subscribe()

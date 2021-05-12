@@ -1,5 +1,5 @@
-import { isObservable, merge } from 'rxjs';
-import { map, share } from 'rxjs/operators';
+import { mergeWithKey } from '@react-rxjs/utils';
+import { isObservable } from 'rxjs';
 import {
   newTag$,
   tagRefDetection$,
@@ -7,39 +7,6 @@ import {
   tagUnsubscription$,
   tagValueChange$,
 } from './changes';
-
-const eventHistory$ = merge(
-  newTag$.pipe(
-    map((payload) => ({
-      type: 'new-tag',
-      payload,
-    }))
-  ),
-  tagSubscription$.pipe(
-    map((payload) => ({
-      type: 'tag-subscription',
-      payload,
-    }))
-  ),
-  tagUnsubscription$.pipe(
-    map((payload) => ({
-      type: 'tag-unsubscription',
-      payload,
-    }))
-  ),
-  tagValueChange$.pipe(
-    map((payload) => ({
-      type: 'tag-value-change',
-      payload,
-    }))
-  ),
-  tagRefDetection$.pipe(
-    map((payload) => ({
-      type: 'tag-ref-detection',
-      payload,
-    }))
-  )
-).pipe(share());
 
 // For subscribers that are late (i.e. devtools take some time to initialize) we must keep old events.
 const pastHistory: any[] = [];
@@ -85,10 +52,16 @@ const WeakRefCtor: typeof WeakRef =
   };
 
 export function initDevtools() {
-  eventHistory$.subscribe(({ type, payload }) => {
+  mergeWithKey({
+    newTag$,
+    tagSubscription$,
+    tagUnsubscription$,
+    tagValueChange$,
+    tagRefDetection$,
+  }).subscribe(({ type, payload }) => {
     const value = (payload as any).value;
     if (
-      type === 'tag-value-change' &&
+      type === 'tagValueChange$' &&
       typeof value === 'object' &&
       value !== null
     ) {
@@ -96,6 +69,7 @@ export function initDevtools() {
         type,
         payload: {
           ...payload,
+          // Wrap the payload into a WeakRef so that it can get garbage collected.
           value: new WeakRefCtor(value),
         },
       });

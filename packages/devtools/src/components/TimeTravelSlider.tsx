@@ -1,11 +1,11 @@
 import { FC, ChangeEvent } from "react"
-import { connectObservable } from "react-rxjs"
+import { bind } from "@react-rxjs/core"
 import { historyLength$, slice$ } from "../messaging"
 import React from "react"
 import "./TimeTravelSlider.css"
 
-const [useHistoryLength] = connectObservable(historyLength$)
-const [useSlice] = connectObservable(slice$)
+const [useHistoryLength] = bind(historyLength$, 0)
+const [useSlice] = bind(slice$, null)
 
 export const TimeTravelSlider: FC = () => {
   const slice = useSlice()

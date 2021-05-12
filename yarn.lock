@@ -1467,6 +1467,11 @@
   resolved "https://registry.yarnpkg.com/@react-rxjs/utils/-/utils-0.3.0.tgz#1fe49d9fe581ce3b00bad12512a222c8f342f16a"
   integrity sha512-cJwSuxUnnbAkliBlxsbu414El2IVIJrrnXcIKYBQvNllcLZJpNUKKosW1GedoO1fHD5HKwDSnllBW7O1jCAMHQ==
 
+"@react-rxjs/utils@^0.8.2":
+  version "0.8.2"
+  resolved "https://registry.yarnpkg.com/@react-rxjs/utils/-/utils-0.8.2.tgz#b662dd9abc03de382bfdcf08e0a2890329e288c7"
+  integrity sha512-oFDCzv9cMdzXqNTnOz70LG+Lj8LoyQ41uXosy7kbWL0BvDuGt08oZjlKr19VxXcLb8zWr5MkU5s+eofBEA8zZA==
+
 "@rollup/plugin-commonjs@^11.0.0":
   version "11.1.0"
   resolved "https://registry.yarnpkg.com/@rollup/plugin-commonjs/-/plugin-commonjs-11.1.0.tgz#60636c7a722f54b41e419e1709df05c7234557ef"

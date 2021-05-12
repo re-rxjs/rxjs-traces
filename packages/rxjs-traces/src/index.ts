@@ -9,6 +9,8 @@ export {
   tagRefDetection$,
   tagValue$,
   tagValueChange$,
+  tagSubscription$,
+  tagUnsubscription$,
 } from './changes';
 export { patchObservable } from './patchObservable';
 export { patchOperator } from './patchOperator';
