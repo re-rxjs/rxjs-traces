@@ -1,6 +1,6 @@
 import { Subject } from "rxjs"
-import { connect } from "./connect"
-import { action$, tagState$ } from "./messaging"
+import { connectState } from "./stateProxy"
+import { createState } from "./state"
 
 export const connectStandalone = () => {
   const newTag$ = new Subject<{
@@ -77,16 +77,18 @@ export const connectStandalone = () => {
     }
   }
 
-  const streams = connect({
+  const state = createState({
     newTag$,
     tagSubscription$,
     tagUnsubscription$,
     tagValueChange$,
     tagRefDetection$,
   })
-  streams.action$.subscribe(action$)
-  streams.tag$.subscribe(tagState$)
+
+  connectState(state)
 
   window.addEventListener("message", handleMessage, false)
   requestMessages()
+
+  return state
 }

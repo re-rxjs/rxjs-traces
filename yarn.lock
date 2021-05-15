@@ -1457,15 +1457,10 @@
   resolved "https://registry.yarnpkg.com/@react-rxjs/core/-/core-0.2.0.tgz#3261a67d285698e64cbf167e1b5691226dfc1b61"
   integrity sha512-95xlW/g3ccJLHmtUK8qT6BZN1pc+Hw067ZcyMAWQa1dvzGXhYKdTElQIvlDnvRG+OEjCO6yhNLqBOCy1sU9oBQ==
 
-"@react-rxjs/core@^0.4.3":
-  version "0.4.3"
-  resolved "https://registry.yarnpkg.com/@react-rxjs/core/-/core-0.4.3.tgz#3cd75ce29558ab5e4051d790eb804124db931e13"
-  integrity sha512-BeNeMTJbo49SWRKEjnqw8ehSdLFhLPKW0FgpBQlV/eymc9oYEPfXjOQWuDEImmtKY3MkNtwVa/Hf5atNh+Zeow==
-
-"@react-rxjs/utils@^0.3.0":
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/@react-rxjs/utils/-/utils-0.3.0.tgz#1fe49d9fe581ce3b00bad12512a222c8f342f16a"
-  integrity sha512-cJwSuxUnnbAkliBlxsbu414El2IVIJrrnXcIKYBQvNllcLZJpNUKKosW1GedoO1fHD5HKwDSnllBW7O1jCAMHQ==
+"@react-rxjs/core@^0.8.0":
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/@react-rxjs/core/-/core-0.8.0.tgz#b73c0480a457b654fdcd6d6ede36bbd99c691b2e"
+  integrity sha512-LvmVEel9MPykAJoI0oZafmui2JOU18bmIf0X0P+oEtVii0LNaj8p/3eL52NfWgsQd6hSrjevSwNbbrScsYuaFg==
 
 "@react-rxjs/utils@^0.8.2":
   version "0.8.2"

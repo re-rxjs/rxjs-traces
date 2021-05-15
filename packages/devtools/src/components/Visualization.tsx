@@ -12,13 +12,6 @@ export const Visualization: FC<{
   const container = useRef<HTMLDivElement | null>(null)
   const network = useRef<Network | null>(null)
 
-  const handleSelectEvent = (event: EdgeSelectEvent) => {
-    onSelectNode(event.nodes[0], event.pointer.DOM.x, event.pointer.DOM.y)
-  }
-  const handleDeselectEvent = (event: EdgeDeselectEvent) => {
-    onDeselectNode(event.previousSelection.nodes[0])
-  }
-
   useEffect(() => {
     const { height } = container.current!.getBoundingClientRect()
 
@@ -38,13 +31,20 @@ export const Visualization: FC<{
     if (!network.current) {
       return
     }
+    const handleSelectEvent = (event: EdgeSelectEvent) => {
+      onSelectNode(event.nodes[0], event.pointer.DOM.x, event.pointer.DOM.y)
+    }
+    const handleDeselectEvent = (event: EdgeDeselectEvent) => {
+      onDeselectNode(event.previousSelection.nodes[0])
+    }
+
     network.current.on("selectNode", handleSelectEvent)
     network.current.on("deselectNode", handleDeselectEvent)
     return () => {
       network.current!.off("selectNode", handleSelectEvent)
       network.current!.off("deselectNode", handleDeselectEvent)
     }
-  }, [handleSelectEvent, handleDeselectEvent])
+  }, [onSelectNode, onDeselectNode])
 
   useEffect(() => {
     filter$.next(filter)

@@ -3,20 +3,26 @@ import { bind } from "@react-rxjs/core"
 import { combineLatest } from "rxjs"
 import { DebugTag } from "rxjs-traces"
 import { map } from "rxjs/operators"
-import { tagInfo$, tagValueById$ } from "../messaging"
 import "./TagOverlay.css"
+import { tagDefById$ } from "../stateProxy"
+import { tagValueById$ } from "../historySlice"
 
-const [useTag] = bind((id: string) =>
-  combineLatest([tagInfo$(id), tagValueById$(id)]).pipe(
-    map(
-      ([info, latestValues]): DebugTag => ({
-        id: info.id,
-        label: info.label,
-        latestValues,
-        refs: info.refs,
-      }),
+const [useTag] = bind(
+  (id: string) =>
+    combineLatest({
+      info: tagDefById$(id),
+      latestValues: tagValueById$,
+    }).pipe(
+      map(
+        ({ info, latestValues }): DebugTag => ({
+          id: info.id,
+          label: info.label,
+          latestValues,
+          refs: info.refs,
+        }),
+      ),
     ),
-  ),
+  null,
 )
 
 export const TagOverlay: FC<{
@@ -28,6 +34,10 @@ export const TagOverlay: FC<{
   const tag = useTag(id)
   const ref = useRef<HTMLDivElement | null>(null)
   const drag = useDrag(ref, initialX + 15, initialY)
+
+  if (!tag) {
+    return null
+  }
 
   const subscriptions = Object.keys(tag.latestValues)
 
@@ -148,7 +158,12 @@ const ValueInspector: FC<{
       {expandElement}
       {label && labelElement}
       {showCopy && (
-        <span className="value-inspector__copy" onClick={copyValue}>
+        <span
+          className="value-inspector__copy"
+          onClick={copyValue}
+          role="img"
+          aria-label="copy"
+        >
           📄
         </span>
       )}
@@ -178,7 +193,7 @@ const useDrag = (
     ref.current.style.visibility = "visible"
     ref.current.style.left = left + "px"
     ref.current.style.top = top + "px"
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     return () => {

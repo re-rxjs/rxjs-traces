@@ -1,6 +1,6 @@
 import { FC, ChangeEvent } from "react"
 import { bind } from "@react-rxjs/core"
-import { historyLength$, slice$ } from "../messaging"
+import { historyLength$, slice$ } from "../historySlice"
 import React from "react"
 import "./TimeTravelSlider.css"
 

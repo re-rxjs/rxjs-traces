@@ -1,26 +1,26 @@
-import { BehaviorSubject, combineLatest, from, timer } from "rxjs"
+import { combineKeys, partitionByKey } from "@react-rxjs/utils"
+import { tagValueById$ } from "historySlice"
+import { BehaviorSubject, combineLatest, EMPTY, from, timer } from "rxjs"
 import {
+  catchError,
   concatMap,
-  debounceTime,
-  distinctUntilChanged,
   filter,
-  finalize,
   map,
   mapTo,
-  share,
+  mergeAll,
+  pairwise,
   startWith,
+  switchMap,
   switchMapTo,
   take,
   takeUntil,
+  tap,
 } from "rxjs/operators"
 import { DataSet, EdgeOptions, NodeOptions } from "vis-network/standalone"
-import { incrementalHistory$, tagState$, tagValueById$ } from "../messaging"
-import { skipResetBursts } from "../operators/incremental"
-import { scanMap } from "../operators/scanMap"
+import { mergeKeys } from "../operators/mergeKeys"
+import { tagDefById$, tagId$ } from "../stateProxy"
 
 export const filter$ = new BehaviorSubject("")
-
-const sharedIncrementalHistory$ = incrementalHistory$.pipe(share())
 
 export const nodes = new DataSet<Node>()
 export interface Node extends NodeOptions {
@@ -56,33 +56,14 @@ const highlightSequence$ = from(highlightSequence).pipe(
   concatMap((v) => timer(500 / highlightSequence.length).pipe(mapTo(v))),
 )
 
-const activeNodeWatches = new Set<string>()
-const createNodeWatch = (id: string, label: string) => {
-  if (activeNodeWatches.has(id)) {
-    return
-  }
-  activeNodeWatches.add(id)
-
-  const tagRemoved$ = tagState$.pipe(
-    filter((v) => !(id in v)),
-    take(1),
-  )
-
-  const highlight$ = sharedIncrementalHistory$.pipe(
-    takeUntil(tagRemoved$),
-    skipResetBursts(),
-    filter(
-      (action) => action.type === "tagValueChange$" && action.payload.id === id,
-    ),
-    switchMapTo(highlightSequence$),
-  )
+const getVizNodeState = (id: string, label: string) => {
+  const highlight$ = tagValueById$(id).pipe(switchMapTo(highlightSequence$))
 
   const suspenseHit$ = tagValueById$(id).pipe(
     map((value) => Object.values(value).includes("Symbol(SUSPENSE)")),
   )
 
   const filterHit$ = filter$.pipe(
-    takeUntil(tagRemoved$),
     map(
       (filter) =>
         Boolean(filter) &&
@@ -91,95 +72,90 @@ const createNodeWatch = (id: string, label: string) => {
   )
 
   // If filterHit or suspenseHit = true, color = filterHit. Otherwise, default color / flashing
-  const color$ = combineLatest([filterHit$, suspenseHit$, highlight$]).pipe(
-    map(([filter, suspense, highlight$]) => {
+  const color$ = combineLatest({
+    filter: filterHit$,
+    suspense: suspenseHit$,
+    highlight: highlight$,
+  }).pipe(
+    map(({ filter, suspense, highlight }) => {
       if (filter || suspense) {
         return nodeColors.filterHit
       }
-      return highlight$
+      return highlight
     }),
     startWith(nodeColors.default),
   )
 
-  const nodeChange$ = combineLatest([
-    sharedIncrementalHistory$.pipe(takeUntil(tagRemoved$)),
-    color$,
-  ]).pipe(
-    scanMap((activeSubscriptions, [action, targetColor]) => {
-      if (action.type === "reset") {
-        activeSubscriptions.clear()
-        return [activeSubscriptions, null]
-      }
+  const opacity$ = tagValueById$(id).pipe(
+    startWith(null),
+    pairwise(),
+    map(([oldValue, newValue]) => {
+      const hadSubscriptions = oldValue
+        ? Object.keys(oldValue.subscriptions).length > 0
+        : false
+      const activeSubscriptions = Object.keys(newValue!.subscriptions)
+      const hasSubscriptions = activeSubscriptions.length > 0
 
-      const historyAction = action.payload
-
-      const actionIsTarget = historyAction.payload.id === id
-      const hadSubscriptions = activeSubscriptions.size > 0
-
-      if (actionIsTarget) {
-        switch (historyAction.type) {
-          case "tagValueChange$":
-          case "tagSubscription$":
-            activeSubscriptions.add(historyAction.payload.sid)
-            break
-          case "tagUnsubscription$":
-            activeSubscriptions.delete(historyAction.payload.sid)
-            break
-        }
-      }
-
-      const hasSubscriptions = activeSubscriptions.size > 0
-
-      if (hasSubscriptions || hadSubscriptions) {
-        return [
-          activeSubscriptions,
-          {
-            id,
-            label,
-            color: targetColor,
-            opacity: activeSubscriptions.size === 0 ? 0.5 : 1,
-          },
-        ]
-      } else {
-        return [activeSubscriptions, null]
-      }
-    }, new Set<string>()),
+      return hasSubscriptions ? 1 : hadSubscriptions ? 0.5 : 0
+    }),
   )
 
-  nodeChange$
-    .pipe(
-      takeUntil(tagRemoved$),
-      debounceTime(0),
-      distinctUntilChanged(),
-      finalize(() => {
-        nodes.remove(id)
-        activeNodeWatches.delete(id)
-      }),
-    )
-    .subscribe((node) => {
-      const nodeExists = nodes.get(id)
-      if (!node) {
-        if (nodeExists) {
-          nodes.remove(id)
-        }
-        return
-      }
-
-      if (!nodeExists) {
-        nodes.add(node)
-      } else {
-        nodes.update(node)
-      }
-    })
+  return combineLatest({
+    opacity: opacity$,
+    color: color$,
+  }).pipe(
+    map(({ opacity, color }) =>
+      opacity === 0
+        ? null
+        : {
+            id,
+            label,
+            color,
+            opacity,
+          },
+    ),
+  )
 }
 
-tagState$.subscribe((tags) => {
-  const tagKeys = Object.keys(tags)
-  tagKeys.forEach((id) => {
-    if (activeNodeWatches.has(id)) return
-    createNodeWatch(id, tags[id].label)
-  })
-})
+const [vizNodeStateById$, vizNodesIds$] = partitionByKey(
+  tagId$.pipe(mergeAll()),
+  (id) => id,
+  (_, id) =>
+    tagDefById$(id).pipe(
+      take(1),
+      switchMap((tagDef) => getVizNodeState(tagDef.id, tagDef.label)),
+      takeUntil(tagId$.pipe(filter((v) => !v.includes(id)))),
+    ),
+)
+
+combineKeys(vizNodesIds$, (id) =>
+  vizNodeStateById$(id).pipe(
+    tap({
+      next: (node) => {
+        const nodeExists = nodes.get(id)
+        if (!node) {
+          if (nodeExists) {
+            nodes.remove(id)
+          }
+          return
+        }
+
+        if (!nodeExists) {
+          nodes.add(node)
+        } else {
+          nodes.update(node)
+        }
+      },
+      complete: () => {
+        nodes.remove(id)
+      },
+    }),
+    catchError((ex) => {
+      console.error(ex)
+      return EMPTY
+    }),
+  ),
+).subscribe()
 
 export interface Edge extends EdgeOptions {
   id: string
@@ -188,23 +164,19 @@ export interface Edge extends EdgeOptions {
 }
 export const edges = new DataSet<Edge>()
 
-tagState$.subscribe((tags) => {
-  if (Object.keys(tags).length <= 1) {
-    edges.clear()
-  }
-
+mergeKeys(tagId$, (id) =>
+  tagDefById$(id).pipe(map((def) => def.refs.map((to) => ({ from: id, to })))),
+).subscribe((refs) => {
   const existingIds = edges.getIds()
-  Object.values(tags).forEach((tag: any) => {
-    const from = tag.id
-    tag.refs.forEach((to: any) => {
-      const id = `${from}->${to}`
-      if (existingIds.includes(id)) return
-      edges.add({
-        id: `${from}->${to}`,
-        from,
-        to,
-        arrows: "from",
-      })
+
+  refs.forEach(({ from, to }) => {
+    const id = `${from}->${to}`
+    if (existingIds.includes(id)) return
+    edges.add({
+      id: `${from}->${to}`,
+      from,
+      to,
+      arrows: "to",
     })
   })
 })
