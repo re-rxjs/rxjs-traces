@@ -5,15 +5,15 @@ import {
   Subscriber,
   Subscription,
   TeardownLogic,
-} from 'rxjs';
+} from "rxjs";
 import {
   detectRefChanges,
   findReverseTagRefs,
   findTagRefs,
   getMetadata,
-} from './metadata';
+} from "./metadata";
 
-const Patched = Symbol('patched');
+const Patched = Symbol("patched");
 export const isPatched = (fn: object) => Boolean(fn && (fn as any)[Patched]);
 export const markAsPatched = (fn: object, patched = true) => {
   (fn as any)[Patched] = patched;
@@ -59,20 +59,20 @@ export function patchObservable(ObservableCtor: typeof Observable) {
       and find out what subscribe calls happen in there.
     */
 
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     let overridenThis = this;
     if (
       (this as any)._subscribe !== (Observable.prototype as any)._subscribe &&
       !isPatched((this as any)._subscribe)
     ) {
-      const patched_subscribe: (
-        subscriber: Subscriber<any>
-      ) => TeardownLogic = (subscriber) =>
-        detectRefChanges(() => {
-          observableStack.push([this]);
-          const result = (this as any)._subscribe(subscriber);
-          observableStack.pop();
-          return result;
-        }, [this]);
+      const patched_subscribe: (subscriber: Subscriber<any>) => TeardownLogic =
+        (subscriber) =>
+          detectRefChanges(() => {
+            observableStack.push([this]);
+            const result = (this as any)._subscribe(subscriber);
+            observableStack.pop();
+            return result;
+          }, [this]);
       markAsPatched(patched_subscribe);
       overridenThis = Object.create(overridenThis, {
         _subscribe: {
@@ -174,13 +174,14 @@ export function patchObservable(ObservableCtor: typeof Observable) {
   };
   markAsPatched(ObservableCtor);
 
-  globalThis.addEventListener('error', onUncaughtException);
+  globalThis.addEventListener("error", onUncaughtException);
 }
 export function restoreObservable(ObservableCtor: typeof Observable) {
-  ObservableCtor.prototype.subscribe = originalSubscribe as typeof ObservableCtor.prototype.subscribe;
+  ObservableCtor.prototype.subscribe =
+    originalSubscribe as typeof ObservableCtor.prototype.subscribe;
   markAsPatched(ObservableCtor, false);
 
-  globalThis.removeEventListener('error', onUncaughtException);
+  globalThis.removeEventListener("error", onUncaughtException);
 }
 
 function getObserver<T>(
@@ -194,16 +195,16 @@ function getObserver<T>(
 
   return {
     next: (value) => {
-      if (typeof observerOrNext === 'function') {
+      if (typeof observerOrNext === "function") {
         observerOrNext(value);
-      } else if (typeof observerOrNext === 'object' && observerOrNext != null) {
+      } else if (typeof observerOrNext === "object" && observerOrNext != null) {
         observerOrNext.next && observerOrNext.next(value);
       }
     },
     error: (err) => {
       if (
         observerOrNext &&
-        typeof observerOrNext === 'object' &&
+        typeof observerOrNext === "object" &&
         observerOrNext.error
       ) {
         observerOrNext.error(err);
@@ -216,7 +217,7 @@ function getObserver<T>(
     complete: () => {
       if (
         observerOrNext &&
-        typeof observerOrNext === 'object' &&
+        typeof observerOrNext === "object" &&
         observerOrNext.complete
       ) {
         observerOrNext.complete();
@@ -238,16 +239,16 @@ function onUncaughtException({ error }: ErrorEvent) {
       const refs = findTagRefs(enhancedError.source);
       if (refs.length)
         console.warn(
-          'rxjs-traces detected error came in stream with references to: [' +
-            refs.join(', ') +
-            ']'
+          "rxjs-traces detected error came in stream with references to: [" +
+            refs.join(", ") +
+            "]"
         );
     }
     if (enhancedError.detectedIn) {
       console.warn(
-        'rxjs-traces detected error went through tags: [' +
-          enhancedError.detectedIn.join(', ') +
-          ']'
+        "rxjs-traces detected error went through tags: [" +
+          enhancedError.detectedIn.join(", ") +
+          "]"
       );
     }
   }
@@ -290,13 +291,13 @@ function addErrorDetection<T>(
   }
 
   if (name) {
-    Object.defineProperty(result.next, 'name', {
+    Object.defineProperty(result.next, "name", {
       value: `DebugTag(--------> ${name} <--------).next`,
     });
-    Object.defineProperty(result.error, 'name', {
+    Object.defineProperty(result.error, "name", {
       value: `DebugTag(--------> ${name} <--------).error`,
     });
-    Object.defineProperty(result.complete, 'name', {
+    Object.defineProperty(result.complete, "name", {
       value: `DebugTag(--------> ${name} <--------).complete`,
     });
   }

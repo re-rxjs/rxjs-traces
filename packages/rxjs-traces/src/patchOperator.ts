@@ -1,5 +1,5 @@
-import { Observable } from 'rxjs';
-import { getMetadata, findReverseTagRefs, detectRefChanges } from './metadata';
+import { Observable } from "rxjs";
+import { getMetadata, findReverseTagRefs, detectRefChanges } from "./metadata";
 
 export const patchOperator = <
   T extends (...args: any[]) => (source: Observable<any>) => Observable<any>
@@ -19,7 +19,7 @@ export const patchOperator = <
     return (source: Observable<unknown>) => {
       // Map arguments to mock out functions and find out if they're projections
       const mappedArgs = args.map((arg) => {
-        if (typeof arg !== 'function') {
+        if (typeof arg !== "function") {
           return arg;
         }
         return (...argFnArgs: any[]) => {

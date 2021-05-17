@@ -1,6 +1,6 @@
-import { mergeWithKey } from '@react-rxjs/utils';
-import { Observable, ReplaySubject, Subject } from 'rxjs';
-import { distinctUntilChanged, scan, share, startWith } from 'rxjs/operators';
+import { mergeWithKey } from "@react-rxjs/utils";
+import { Observable, ReplaySubject, Subject } from "rxjs";
+import { distinctUntilChanged, scan, share, startWith } from "rxjs/operators";
 
 export const newTag$ = new ReplaySubject<{
   id: string;
@@ -47,9 +47,9 @@ export const tagValue$: Observable<Record<string, DebugTag>> = mergeWithKey({
 }).pipe(
   scan((state, action) => {
     switch (action.type) {
-      case 'tagReset$':
+      case "tagReset$":
         return {};
-      case 'newTag$':
+      case "newTag$":
         if (state[action.payload.id]) {
           return state;
         }
@@ -61,7 +61,7 @@ export const tagValue$: Observable<Record<string, DebugTag>> = mergeWithKey({
             latestValues: {},
           },
         };
-      case 'tagSubscription$':
+      case "tagSubscription$":
         return {
           ...state,
           [action.payload.id]: {
@@ -72,10 +72,9 @@ export const tagValue$: Observable<Record<string, DebugTag>> = mergeWithKey({
             },
           },
         };
-      case 'tagUnsubscription$':
-        const { [action.payload.sid]: _, ...latestValues } = state[
-          action.payload.id
-        ].latestValues;
+      case "tagUnsubscription$":
+        const { [action.payload.sid]: _, ...latestValues } =
+          state[action.payload.id].latestValues;
         return {
           ...state,
           [action.payload.id]: {
@@ -83,7 +82,7 @@ export const tagValue$: Observable<Record<string, DebugTag>> = mergeWithKey({
             latestValues,
           },
         };
-      case 'tagValueChange$':
+      case "tagValueChange$":
         const values = {
           ...state[action.payload.id].latestValues,
         };
@@ -98,7 +97,7 @@ export const tagValue$: Observable<Record<string, DebugTag>> = mergeWithKey({
             latestValues: values,
           },
         };
-      case 'tagRefDetection$':
+      case "tagRefDetection$":
         if (state[action.payload.id].refs.includes(action.payload.ref)) {
           return state;
         }

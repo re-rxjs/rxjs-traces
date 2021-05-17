@@ -1,5 +1,5 @@
-import { Observable } from 'rxjs';
-import { tagRefDetection$ } from './changes';
+import { Observable } from "rxjs";
+import { tagRefDetection$ } from "./changes";
 
 interface ObservableMetadata {
   tag: string | null;
@@ -29,6 +29,7 @@ export const getMetadata = (
     };
     metadataStore.set(observable, defaultMetadata);
   }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   return metadataStore.get(observable)!;
 };
 
@@ -47,9 +48,10 @@ export const detectRefChanges = <T>(
   for (let i = 0; i < filteredInstances.length; i++) {
     if (after[i].length > before[i].size) {
       after[i].forEach((ref) => {
-        if (!before[i].has(ref)) {
+        const id = getMetadata(filteredInstances[i]).tag;
+        if (!before[i].has(ref) && id !== null) {
           tagRefDetection$.next({
-            id: getMetadata(filteredInstances[i]).tag!,
+            id,
             ref,
           });
         }

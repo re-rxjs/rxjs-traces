@@ -1,24 +1,24 @@
-import { FC, ChangeEvent } from "react"
-import { bind } from "@react-rxjs/core"
-import { historyLength$, slice$ } from "../historySlice"
-import React from "react"
-import "./TimeTravelSlider.css"
+import { FC, ChangeEvent } from "react";
+import { bind } from "@react-rxjs/core";
+import { historyLength$, slice$ } from "../historySlice";
+import React from "react";
+import "./TimeTravelSlider.css";
 
-const [useHistoryLength] = bind(historyLength$, 0)
-const [useSlice] = bind(slice$, null)
+const [useHistoryLength] = bind(historyLength$, 0);
+const [useSlice] = bind(slice$, null);
 
 export const TimeTravelSlider: FC = () => {
-  const slice = useSlice()
-  const max = useHistoryLength()
+  const slice = useSlice();
+  const max = useHistoryLength();
 
   const handleOnChange = (evt: ChangeEvent<HTMLInputElement>) => {
-    const value = Number(evt.target.value)
+    const value = Number(evt.target.value);
     if (value === max) {
-      slice$.next(null)
+      slice$.next(null);
     } else {
-      slice$.next(value)
+      slice$.next(value);
     }
-  }
+  };
 
   return (
     <div className="time-travel">
@@ -38,5 +38,5 @@ export const TimeTravelSlider: FC = () => {
         onChange={handleOnChange}
       />
     </div>
-  )
-}
+  );
+};

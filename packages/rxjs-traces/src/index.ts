@@ -1,8 +1,8 @@
-import { initDevtools } from './devtools';
+import { initDevtools } from "./devtools";
 
 initDevtools();
 
-export { addDebugTag } from './debugTag';
+export { addDebugTag } from "./debugTag";
 export {
   DebugTag,
   newTag$,
@@ -11,8 +11,8 @@ export {
   tagValueChange$,
   tagSubscription$,
   tagUnsubscription$,
-} from './changes';
-export { patchObservable } from './patchObservable';
-export { patchOperator } from './patchOperator';
-export { createLink } from './link';
-export { wrapReactRxjs } from './wrapReactRxjs';
+} from "./changes";
+export { patchObservable } from "./patchObservable";
+export { patchOperator } from "./patchOperator";
+export { createLink } from "./link";
+export { wrapReactRxjs } from "./wrapReactRxjs";

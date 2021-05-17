@@ -1,19 +1,19 @@
-import React, { FC, useEffect, useRef } from "react"
-import { Network } from "vis-network/standalone"
-import "./Visualization.css"
-import { edges, nodes, filter$ } from "./visualizationState"
+import React, { FC, useEffect, useRef } from "react";
+import { Network } from "vis-network/standalone";
+import "./Visualization.css";
+import { edges, nodes, filter$ } from "./visualizationState";
 
-const noop = () => void 0
+const noop = () => void 0;
 export const Visualization: FC<{
-  filter: string
-  onSelectNode?: (id: string, x: number, y: number) => void
-  onDeselectNode?: (id: string) => void
+  filter: string;
+  onSelectNode?: (id: string, x: number, y: number) => void;
+  onDeselectNode?: (id: string) => void;
 }> = ({ filter, onSelectNode = noop, onDeselectNode = noop }) => {
-  const container = useRef<HTMLDivElement | null>(null)
-  const network = useRef<Network | null>(null)
+  const container = useRef<HTMLDivElement | null>(null);
+  const network = useRef<Network | null>(null);
 
   useEffect(() => {
-    const { height } = container.current!.getBoundingClientRect()
+    const { height } = container.current!.getBoundingClientRect();
 
     network.current = new Network(
       container.current!,
@@ -23,50 +23,50 @@ export const Visualization: FC<{
       },
       {
         height: height + "px",
-      },
-    )
-  }, [])
+      }
+    );
+  }, []);
 
   useEffect(() => {
     if (!network.current) {
-      return
+      return;
     }
     const handleSelectEvent = (event: EdgeSelectEvent) => {
-      onSelectNode(event.nodes[0], event.pointer.DOM.x, event.pointer.DOM.y)
-    }
+      onSelectNode(event.nodes[0], event.pointer.DOM.x, event.pointer.DOM.y);
+    };
     const handleDeselectEvent = (event: EdgeDeselectEvent) => {
-      onDeselectNode(event.previousSelection.nodes[0])
-    }
+      onDeselectNode(event.previousSelection.nodes[0]);
+    };
 
-    network.current.on("selectNode", handleSelectEvent)
-    network.current.on("deselectNode", handleDeselectEvent)
+    network.current.on("selectNode", handleSelectEvent);
+    network.current.on("deselectNode", handleDeselectEvent);
     return () => {
-      network.current!.off("selectNode", handleSelectEvent)
-      network.current!.off("deselectNode", handleDeselectEvent)
-    }
-  }, [onSelectNode, onDeselectNode])
+      network.current!.off("selectNode", handleSelectEvent);
+      network.current!.off("deselectNode", handleDeselectEvent);
+    };
+  }, [onSelectNode, onDeselectNode]);
 
   useEffect(() => {
-    filter$.next(filter)
-  }, [filter])
+    filter$.next(filter);
+  }, [filter]);
 
-  return <div ref={container} className="visualization"></div>
-}
+  return <div ref={container} className="visualization"></div>;
+};
 
 interface EdgeSelectEvent {
-  edges: string[]
+  edges: string[];
   event: {
-    center: { x: number; y: number }
-  }
-  nodes: string[]
+    center: { x: number; y: number };
+  };
+  nodes: string[];
   pointer: {
-    DOM: { x: number; y: number }
-    canvas: { x: number; y: number }
-  }
+    DOM: { x: number; y: number };
+    canvas: { x: number; y: number };
+  };
 }
 interface EdgeDeselectEvent extends EdgeSelectEvent {
   previousSelection: {
-    edges: string[]
-    nodes: string[]
-  }
+    edges: string[];
+    nodes: string[];
+  };
 }

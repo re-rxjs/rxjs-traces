@@ -1,17 +1,17 @@
-import { mergeWithKey } from '@react-rxjs/utils';
-import { isObservable } from 'rxjs';
+import { mergeWithKey } from "@react-rxjs/utils";
+import { isObservable } from "rxjs";
 import {
   newTag$,
   tagRefDetection$,
   tagSubscription$,
   tagUnsubscription$,
   tagValueChange$,
-} from './changes';
+} from "./changes";
 
 // For subscribers that are late (i.e. devtools take some time to initialize) we must keep old events.
 const pastHistory: any[] = [];
 
-window.addEventListener('message', (event: MessageEvent) => {
+window.addEventListener("message", (event: MessageEvent) => {
   const { data, origin } = event;
 
   if (origin !== window.location.origin) {
@@ -19,14 +19,14 @@ window.addEventListener('message', (event: MessageEvent) => {
   }
 
   if (
-    typeof data === 'object' &&
-    data.source === 'rxjs-traces-devtools' &&
-    data.type === 'receive'
+    typeof data === "object" &&
+    data.source === "rxjs-traces-devtools" &&
+    data.type === "receive"
   ) {
     window.postMessage(
       {
-        source: 'rxjs-traces',
-        type: 'event-history',
+        source: "rxjs-traces",
+        type: "event-history",
         payload: prepareForTransmit(pastHistory),
       },
       window.location.origin
@@ -61,8 +61,8 @@ export function initDevtools() {
   }).subscribe(({ type, payload }) => {
     const value = (payload as any).value;
     if (
-      type === 'tagValueChange$' &&
-      typeof value === 'object' &&
+      type === "tagValueChange$" &&
+      typeof value === "object" &&
       value !== null
     ) {
       pastHistory.push({
@@ -80,14 +80,14 @@ export function initDevtools() {
     try {
       window.postMessage(
         {
-          source: 'rxjs-traces',
+          source: "rxjs-traces",
           type,
           payload: prepareForTransmit(payload),
         },
         window.location.origin
       );
     } catch (ex) {
-      if (ex.name === 'DataCloneError') {
+      if (ex.name === "DataCloneError") {
         console.warn(`Can't transmit object to devtools`, payload, ex);
       } else {
         throw ex;
@@ -97,8 +97,8 @@ export function initDevtools() {
 
   window.postMessage(
     {
-      source: 'rxjs-traces-bridge',
-      type: 'connected',
+      source: "rxjs-traces-bridge",
+      type: "connected",
     },
     window.location.origin
   );
@@ -117,21 +117,21 @@ function prepareForTransmit<T>(
   if (value instanceof WeakRefCtor) {
     const ref = value.deref();
     if (ref === undefined) {
-      return 'Symbol(GCed Object)';
+      return "Symbol(GCed Object)";
     }
     return prepareForTransmit(ref, visitedValues);
   }
   switch (typeof value) {
-    case 'symbol':
+    case "symbol":
       return String(value);
-    case 'undefined':
-      return 'Symbol(undefined)';
-    case 'object':
+    case "undefined":
+      return "Symbol(undefined)";
+    case "object":
       if (value === null) {
         return value;
       }
       if (isObservable(value)) {
-        return 'Symbol(Observable)';
+        return "Symbol(Observable)";
       }
 
       if (value instanceof Map) {
@@ -163,10 +163,10 @@ function prepareForTransmit<T>(
           (result[key] = prepareForTransmit((value as any)[key], visitedValues))
       );
       return result;
-    case 'function':
+    case "function":
       return `Symbol(function ${value.name})`;
-    case 'bigint':
-      return value.toString() + 'n';
+    case "bigint":
+      return value.toString() + "n";
     default:
       return value;
   }

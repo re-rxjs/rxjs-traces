@@ -1,17 +1,17 @@
-import React, { FC, RefObject, useEffect, useRef, useState } from "react"
-import { bind } from "@react-rxjs/core"
-import { combineLatest } from "rxjs"
-import { DebugTag } from "rxjs-traces"
-import { map } from "rxjs/operators"
-import "./TagOverlay.css"
-import { tagDefById$ } from "../stateProxy"
-import { tagValueById$ } from "../historySlice"
+import { bind } from "@react-rxjs/core";
+import React, { FC, useEffect, useRef, useState } from "react";
+import { combineLatest } from "rxjs";
+import { DebugTag } from "rxjs-traces";
+import { map } from "rxjs/operators";
+import { tagValueById$ } from "../historySlice";
+import { tagDefById$ } from "../stateProxy";
+import "./TagOverlay.css";
 
 const [useTag] = bind(
   (id: string) =>
     combineLatest({
       info: tagDefById$(id),
-      latestValues: tagValueById$,
+      latestValues: tagValueById$(id),
     }).pipe(
       map(
         ({ info, latestValues }): DebugTag => ({
@@ -19,30 +19,30 @@ const [useTag] = bind(
           label: info.label,
           latestValues,
           refs: info.refs,
-        }),
-      ),
+        })
+      )
     ),
-  null,
-)
+  null
+);
 
 export const TagOverlay: FC<{
-  id: string
-  initialX: number
-  initialY: number
-  onCopy?: (value: string) => void
+  id: string;
+  initialX: number;
+  initialY: number;
+  onCopy?: (value: string) => void;
 }> = ({ id, initialX, initialY, onCopy }) => {
-  const tag = useTag(id)
-  const ref = useRef<HTMLDivElement | null>(null)
-  const drag = useDrag(ref, initialX + 15, initialY)
+  const tag = useTag(id);
+  const [ref, setRef] = useState<HTMLDivElement | null>(null);
+  const drag = useDrag(ref, initialX + 15, initialY);
 
   if (!tag) {
-    return null
+    return null;
   }
 
-  const subscriptions = Object.keys(tag.latestValues)
+  const subscriptions = Object.keys(tag.latestValues);
 
   return (
-    <div className="tag-overlay" ref={ref}>
+    <div className="tag-overlay" ref={setRef}>
       <div className="tag-overlay__header" onMouseDown={drag}>
         {tag.label}
       </div>
@@ -63,29 +63,29 @@ export const TagOverlay: FC<{
         ))}
       </div>
     </div>
-  )
-}
+  );
+};
 
 const ValueInspector: FC<{
-  label?: string
-  value: any
-  level: number
-  onCopy?: (value: string) => void
+  label?: string;
+  value: any;
+  level: number;
+  onCopy?: (value: string) => void;
 }> = ({ label, value, level, onCopy = () => void 0 }) => {
-  const [expanded, setExpanded] = useState(level < 2)
+  const [expanded, setExpanded] = useState(level < 2);
   const expandible =
-    typeof value === "object" && Object.keys(value || {}).length > 0
+    typeof value === "object" && Object.keys(value || {}).length > 0;
 
   const renderInline = () => {
     const valueRep = () => {
       if (typeof value === "object") {
-        return JSON.stringify(value)
+        return JSON.stringify(value);
       }
       if (typeof value === "string") {
-        return `"${value}"`
+        return `"${value}"`;
       }
-      return String(value)
-    }
+      return String(value);
+    };
 
     return (
       <span
@@ -96,11 +96,11 @@ const ValueInspector: FC<{
       >
         {valueRep()}
       </span>
-    )
-  }
+    );
+  };
 
   const renderExpanded = () => {
-    const keys = Object.keys(value)
+    const keys = Object.keys(value);
     return (
       <div className="value-inspector__expanded">
         {keys.map((key) => (
@@ -113,8 +113,8 @@ const ValueInspector: FC<{
           />
         ))}
       </div>
-    )
-  }
+    );
+  };
 
   const expandElement = expandible ? (
     <span
@@ -125,33 +125,33 @@ const ValueInspector: FC<{
     </span>
   ) : (
     <span className="value-inspector__expand-spacer" />
-  )
-  const labelElement = <span className="value-inspector__label">{label}:</span>
+  );
+  const labelElement = <span className="value-inspector__label">{label}:</span>;
   const valueElement =
-    expanded && expandible ? renderExpanded() : renderInline()
+    expanded && expandible ? renderExpanded() : renderInline();
 
-  const showCopy = typeof value === "object" && expandible
+  const showCopy = typeof value === "object" && expandible;
   const copyValue = () => {
-    const stringified = new WeakSet<object>()
+    const stringified = new WeakSet<object>();
     onCopy(
       JSON.stringify(
         value,
         (_, value) => {
           if (value === undefined) {
-            return "Symbol(undefined)"
+            return "Symbol(undefined)";
           }
           if (typeof value === "object" && value !== null) {
             if (stringified.has(value)) {
-              return "Symbol(Circular reference)"
+              return "Symbol(Circular reference)";
             }
-            stringified.add(value)
+            stringified.add(value);
           }
-          return value
+          return value;
         },
-        2,
-      ),
-    )
-  }
+        2
+      )
+    );
+  };
 
   return (
     <div className="value-inspector">
@@ -169,90 +169,88 @@ const ValueInspector: FC<{
       )}
       {valueElement}
     </div>
-  )
-}
+  );
+};
 
 const useDrag = (
-  ref: RefObject<HTMLElement>,
+  ref: HTMLElement | null,
   initialX: number,
-  initialY: number,
+  initialY: number
 ) => {
-  const cleanupRef = useRef<(() => void) | null>(null)
+  const cleanupRef = useRef<(() => void) | null>(null);
   useEffect(() => {
-    if (!ref.current) {
-      return
+    if (!ref) {
+      return;
     }
     const left = Math.min(
       initialX,
-      document.body.clientWidth - ref.current.clientWidth - 15,
-    )
+      document.body.clientWidth - ref.clientWidth - 15
+    );
     const top = Math.min(
       initialY,
-      document.body.clientHeight - ref.current.clientHeight - 15,
-    )
-    ref.current.style.visibility = "visible"
-    ref.current.style.left = left + "px"
-    ref.current.style.top = top + "px"
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+      document.body.clientHeight - ref.clientHeight - 15
+    );
+    ref.style.visibility = "visible";
+    ref.style.left = left + "px";
+    ref.style.top = top + "px";
+  }, [ref]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     return () => {
       if (cleanupRef.current) {
-        cleanupRef.current()
+        cleanupRef.current();
       }
-    }
-  }, [])
+    };
+  }, []);
 
   return (event: React.MouseEvent) => {
-    if (!ref.current) {
-      return
+    if (!ref) {
+      return;
     }
     if (cleanupRef.current) {
-      cleanupRef.current()
+      cleanupRef.current();
     }
 
     const elementPosition = {
-      x: Number.parseFloat(ref.current.style.left),
-      y: Number.parseFloat(ref.current.style.top),
-    }
+      x: Number.parseFloat(ref.style.left),
+      y: Number.parseFloat(ref.style.top),
+    };
 
     const positionRef = {
       x: elementPosition.x - event.pageX,
       y: elementPosition.y - event.pageY,
-    }
+    };
 
-    let lastFrameUpdateMouseEvent: MouseEvent | null = null
+    let lastFrameUpdateMouseEvent: MouseEvent | null = null;
     const performUpdate = () => {
-      if (!ref.current || !lastFrameUpdateMouseEvent) {
-        return
+      if (!ref || !lastFrameUpdateMouseEvent) {
+        return;
       }
 
-      ref.current.style.left =
-        positionRef.x + lastFrameUpdateMouseEvent.pageX + "px"
-      ref.current.style.top =
-        positionRef.y + lastFrameUpdateMouseEvent.pageY + "px"
-      lastFrameUpdateMouseEvent = null
-    }
+      ref.style.left = positionRef.x + lastFrameUpdateMouseEvent.pageX + "px";
+      ref.style.top = positionRef.y + lastFrameUpdateMouseEvent.pageY + "px";
+      lastFrameUpdateMouseEvent = null;
+    };
 
     const updatePosition = (event: MouseEvent) => {
-      const scheduleRaf = !lastFrameUpdateMouseEvent
-      lastFrameUpdateMouseEvent = event
+      const scheduleRaf = !lastFrameUpdateMouseEvent;
+      lastFrameUpdateMouseEvent = event;
 
       if (scheduleRaf) {
-        requestAnimationFrame(performUpdate)
+        requestAnimationFrame(performUpdate);
       }
-    }
+    };
     const endDrag = (event: MouseEvent) => {
-      cleanupRef.current!()
-      cleanupRef.current = null
-      updatePosition(event)
-    }
+      cleanupRef.current!();
+      cleanupRef.current = null;
+      updatePosition(event);
+    };
 
-    window.addEventListener("mousemove", updatePosition)
-    window.addEventListener("mouseup", endDrag)
+    window.addEventListener("mousemove", updatePosition);
+    window.addEventListener("mouseup", endDrag);
     cleanupRef.current = () => {
-      window.removeEventListener("mousemove", updatePosition)
-      window.removeEventListener("mouseup", endDrag)
-    }
-  }
-}
+      window.removeEventListener("mousemove", updatePosition);
+      window.removeEventListener("mouseup", endDrag);
+    };
+  };
+};

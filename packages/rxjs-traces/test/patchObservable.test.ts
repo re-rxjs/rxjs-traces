@@ -1,15 +1,16 @@
-import { shareLatest } from '@react-rxjs/core';
+import { shareLatest } from "@react-rxjs/core";
 import {
   concat,
   connectable,
   defer,
   from,
   interval,
+  firstValueFrom,
   merge,
   Observable,
   of,
-} from 'rxjs';
-import { marbles } from 'rxjs-marbles/jest';
+} from "rxjs";
+import { marbles } from "rxjs-marbles/jest";
 import {
   catchError,
   concatMap,
@@ -24,17 +25,17 @@ import {
   takeLast,
   timeout,
   withLatestFrom,
-} from 'rxjs/operators';
-import { addDebugTag, patchObservable, tagValue$ } from '../src';
-import { resetTag$ } from '../src/changes';
-import { findTagRefs } from '../src/metadata';
-import { restoreObservable } from '../src/patchObservable';
+} from "rxjs/operators";
+import { addDebugTag, patchObservable, tagValue$ } from "../src";
+import { resetTag$ } from "../src/changes";
+import { findTagRefs } from "../src/metadata";
+import { restoreObservable } from "../src/patchObservable";
 
 afterEach(() => {
   resetTag$();
 });
 
-describe('patchObservable', () => {
+describe("patchObservable", () => {
   beforeAll(() => {
     patchObservable(Observable);
   });
@@ -42,23 +43,23 @@ describe('patchObservable', () => {
     restoreObservable(Observable);
   });
 
-  describe('keeps the Observable API unchanged', () => {
+  describe("keeps the Observable API unchanged", () => {
     it(
       `emits regular values on subscribe`,
       marbles((m) => {
-        const source = m.cold('a-b-c-|');
-        const expected = '     a-b-c-|';
+        const source = m.cold("a-b-c-|");
+        const expected = "     a-b-c-|";
 
         m.expect(source).toBeObservable(expected);
       })
     );
 
     it(
-      'emits regular values with pipes and standard operators',
+      "emits regular values with pipes and standard operators",
       marbles((m) => {
-        const source = m.cold<string>('a-b-c-|');
-        const expected = '             ---m--n--(o|)';
-        const delayTime = m.time('     ---|');
+        const source = m.cold<string>("a-b-c-|");
+        const expected = "             ---m--n--(o|)";
+        const delayTime = m.time("     ---|");
 
         const stream = source.pipe(
           map((char) => char.charCodeAt(0)),
@@ -75,14 +76,14 @@ describe('patchObservable', () => {
     );
 
     it(
-      'emits regular values when used with addDebugTag',
+      "emits regular values when used with addDebugTag",
       marbles((m) => {
-        const source = m.cold<string>('a-b-c-|');
-        const expected = '             0-1-2-|';
+        const source = m.cold<string>("a-b-c-|");
+        const expected = "             0-1-2-|";
 
         const stream = source.pipe(
-          addDebugTag('debug'),
-          map((char) => String(char.charCodeAt(0) - 'a'.charCodeAt(0)))
+          addDebugTag("debug"),
+          map((char) => String(char.charCodeAt(0) - "a".charCodeAt(0)))
         );
 
         m.expect(stream).toBeObservable(expected);
@@ -92,8 +93,8 @@ describe('patchObservable', () => {
     it(
       `doesn't break when using connectable observables`,
       marbles((m) => {
-        const source = m.cold<string>('-a-b-c-|');
-        const expected = '             -a-b-c-|)';
+        const source = m.cold<string>("-a-b-c-|");
+        const expected = "             -a-b-c-|)";
 
         const stream = connectable(source);
         stream.connect();
@@ -106,8 +107,8 @@ describe('patchObservable', () => {
     it(
       `doesn't break synchronous share`,
       marbles((m) => {
-        const source = from(['a', 'b', 'c']);
-        const expected = '(abc|)';
+        const source = from(["a", "b", "c"]);
+        const expected = "(abc|)";
         const stream = source.pipe(share());
 
         m.expect(stream).toBeObservable(expected);
@@ -117,16 +118,16 @@ describe('patchObservable', () => {
     it(
       `propagates unsubscriptions through share`,
       marbles((m) => {
-        const source = m.cold('-------|');
-        const subs = '         ^---!';
-        const time = m.time('  ----|');
-        const expected = '     ----#';
+        const source = m.cold("-------|");
+        const subs = "         ^---!";
+        const time = m.time("  ----|");
+        const expected = "     ----#";
 
         const stream = source.pipe(
           share(),
           timeout(time),
           catchError(() => {
-            throw 'error'; // eslint-disable-line no-throw-literal
+            throw "error"; // eslint-disable-line no-throw-literal
           })
         );
 
@@ -140,24 +141,24 @@ describe('patchObservable', () => {
       marbles((m) => {
         const deferredCount = defer(() => source).pipe(startWith(0));
 
-        const source: Observable<string> = m.cold('123|').pipe(
+        const source: Observable<string> = m.cold("123|").pipe(
           withLatestFrom(deferredCount),
           map(([a, b]) => String(Number(a) + Number(b))),
           share()
         );
-        const expected = '136|';
+        const expected = "136|";
 
         m.expect(source).toBeObservable(expected);
       })
     );
   });
 
-  describe('watches for relationships between tags', () => {
-    it('references only up to the parent', async () => {
+  describe("watches for relationships between tags", () => {
+    it("references only up to the parent", async () => {
       const stream = of(1).pipe(
-        addDebugTag('source'),
-        addDebugTag('middle'),
-        addDebugTag('result')
+        addDebugTag("source"),
+        addDebugTag("middle"),
+        addDebugTag("result")
       );
       const tags = await stream
         .pipe(
@@ -171,22 +172,22 @@ describe('patchObservable', () => {
            */
           delay(0),
           withLatestFrom(tagValue$),
-          map(([_, tags]) => tags)
+          map(([, tags]) => tags)
         )
         .toPromise();
 
-      expect(tags.result.refs).toEqual(['middle']);
-      expect(tags.middle.refs).toEqual(['source']);
+      expect(tags.result.refs).toEqual(["middle"]);
+      expect(tags.middle.refs).toEqual(["source"]);
       expect(tags.source.refs).toEqual([]);
     });
 
-    it('references only the parent with custom operator followed by standard operator', async () => {
+    it("references only the parent with custom operator followed by standard operator", async () => {
       const stream = of(1).pipe(
-        addDebugTag('source'),
+        addDebugTag("source"),
         (source) => new Observable((obs) => source.subscribe(obs)),
-        map((v) => 0),
-        addDebugTag('middle'),
-        addDebugTag('result')
+        map(() => 0),
+        addDebugTag("middle"),
+        addDebugTag("result")
       );
 
       const tags = (await stream
@@ -194,21 +195,21 @@ describe('patchObservable', () => {
           takeLast(1),
           delay(0),
           withLatestFrom(tagValue$),
-          map(([_, tags]) => tags)
+          map(([, tags]) => tags)
         )
         .toPromise()) as any;
 
-      expect(tags.result.refs).toEqual(['middle']);
-      expect(tags.middle.refs).toEqual(['source']);
+      expect(tags.result.refs).toEqual(["middle"]);
+      expect(tags.middle.refs).toEqual(["source"]);
       expect(tags.source.refs).toEqual([]);
     });
 
-    it('references only up to the parent followed by a refcount', async () => {
+    it("references only up to the parent followed by a refcount", async () => {
       const stream = of(1).pipe(
-        addDebugTag('source'),
-        addDebugTag('middle'),
+        addDebugTag("source"),
+        addDebugTag("middle"),
         share(),
-        addDebugTag('result')
+        addDebugTag("result")
       );
 
       const tags = await stream
@@ -216,39 +217,39 @@ describe('patchObservable', () => {
           takeLast(1),
           delay(0),
           withLatestFrom(tagValue$),
-          map(([_, tags]) => tags)
+          map(([, tags]) => tags)
         )
         .toPromise();
 
-      expect(tags.result.refs).toEqual(['middle']);
-      expect(tags.middle.refs).toEqual(['source']);
+      expect(tags.result.refs).toEqual(["middle"]);
+      expect(tags.middle.refs).toEqual(["source"]);
       expect(tags.source.refs).toEqual([]);
     });
 
-    it('detects references across standard operators', async () => {
+    it("detects references across standard operators", async () => {
       const stream = of(1).pipe(
-        addDebugTag('source'),
+        addDebugTag("source"),
         map((value) => value + 2),
-        addDebugTag('result')
+        addDebugTag("result")
       );
       const tags = await stream
         .pipe(
           takeLast(1),
           delay(0),
           withLatestFrom(tagValue$),
-          map(([_, tags]) => tags)
+          map(([, tags]) => tags)
         )
         .toPromise();
 
-      expect(tags.result.refs).toEqual(['source']);
+      expect(tags.result.refs).toEqual(["source"]);
       expect(tags.source.refs).toEqual([]);
     });
 
-    it('detects references across custom simple operators', async () => {
+    it("detects references across custom simple operators", async () => {
       const stream = of(1).pipe(
-        addDebugTag('source'),
+        addDebugTag("source"),
         (source) => new Observable((obs) => source.subscribe(obs)),
-        addDebugTag('result')
+        addDebugTag("result")
       );
 
       const tags = await stream
@@ -256,41 +257,41 @@ describe('patchObservable', () => {
           takeLast(1),
           delay(0),
           withLatestFrom(tagValue$),
-          map(([_, tags]) => tags)
+          map(([, tags]) => tags)
         )
         .toPromise();
 
-      expect(tags.result.refs).toEqual(['source']);
+      expect(tags.result.refs).toEqual(["source"]);
       expect(tags.source.refs).toEqual([]);
     });
 
-    it('detects references from async operators', async () => {
+    it("detects references from async operators", async () => {
       const stream = of(1).pipe(
         delay(0),
-        addDebugTag('source'),
-        switchMap((v) => of(v).pipe(delay(10), addDebugTag('inner'))),
-        addDebugTag('result')
+        addDebugTag("source"),
+        switchMap((v) => of(v).pipe(delay(10), addDebugTag("inner"))),
+        addDebugTag("result")
       );
       const tags = await stream
         .pipe(
           takeLast(1),
           withLatestFrom(tagValue$),
-          map(([_, tags]) => tags)
+          map(([, tags]) => tags)
         )
         .toPromise();
 
-      expect(tags.result.refs).toEqual(['source', 'inner']);
+      expect(tags.result.refs).toEqual(["source", "inner"]);
       expect(tags.source.refs).toEqual([]);
       expect(tags.inner.refs).toEqual([]);
     });
 
-    it('detects references from argument streams', async () => {
+    it("detects references from argument streams", async () => {
       const createSource = (id: number) =>
-        of(id).pipe(delay(10), addDebugTag('source' + id));
+        of(id).pipe(delay(10), addDebugTag("source" + id));
 
       const stream = createSource(1).pipe(
         withLatestFrom(createSource(2)),
-        addDebugTag('result')
+        addDebugTag("result")
       );
 
       const tags = await stream
@@ -298,13 +299,13 @@ describe('patchObservable', () => {
           takeLast(1),
           delay(0),
           withLatestFrom(tagValue$),
-          map(([_, tags]) => tags)
+          map(([, tags]) => tags)
         )
         .toPromise();
 
       expect(tags.result.refs.length).toBe(2);
-      expect(tags.result.refs).toContain('source1');
-      expect(tags.result.refs).toContain('source2');
+      expect(tags.result.refs).toContain("source1");
+      expect(tags.result.refs).toContain("source2");
       expect(tags.source1.refs).toEqual([]);
       expect(tags.source2.refs).toEqual([]);
     });
@@ -313,12 +314,12 @@ describe('patchObservable', () => {
      * to link streams toghether, and concat won't subscribe to the next
      * observable until the first hasn't completed
      */
-    it('detects references from creation operators', async () => {
+    it("detects references from creation operators", async () => {
       const createSource = (id: number) =>
-        of(id).pipe(delay(10), addDebugTag('source' + id));
+        of(id).pipe(delay(10), addDebugTag("source" + id));
 
       const stream = concat(createSource(1), createSource(2)).pipe(
-        addDebugTag('result')
+        addDebugTag("result")
       );
 
       const tags = await stream
@@ -326,48 +327,49 @@ describe('patchObservable', () => {
           takeLast(1),
           delay(0),
           withLatestFrom(tagValue$),
-          map(([_, tags]) => tags)
+          map(([, tags]) => tags)
         )
         .toPromise();
 
-      expect(tags.result.refs).toEqual(['source1', 'source2']);
+      expect(tags.result.refs).toEqual(["source1", "source2"]);
       expect(tags.source1.refs).toEqual([]);
       expect(tags.source2.refs).toEqual([]);
     });
 
-    it('works across custom shared operators', async () => {
+    it("works across custom shared operators", async () => {
       const source = interval(10).pipe(
         take(5),
-        addDebugTag('source'),
+        addDebugTag("source"),
         shareLatest()
       );
 
-      const stream1 = source.pipe(addDebugTag('result1'));
-      const stream2 = source.pipe(addDebugTag('result2'));
+      const stream1 = source.pipe(addDebugTag("result1"));
+      const stream2 = source.pipe(addDebugTag("result2"));
+      tagValue$.subscribe();
 
-      const tags = await merge(stream1, stream2)
-        .pipe(
+      const tags = await firstValueFrom(
+        merge(stream1, stream2).pipe(
           takeLast(1),
           withLatestFrom(tagValue$),
-          map(([_, tags]) => tags)
+          map(([, tags]) => tags)
         )
-        .toPromise();
+      );
 
-      expect(tags.result1.refs).toEqual(['source']);
-      expect(tags.result2.refs).toEqual(['source']);
+      expect(tags.result1.refs).toEqual(["source"]);
+      expect(tags.result2.refs).toEqual(["source"]);
       expect(tags.source.refs).toEqual([]);
     });
 
-    it('detects recursive references', async () => {
+    it("detects recursive references", async () => {
       const deferredCount = defer(() => source).pipe(startWith(0));
 
       const source: Observable<number> = interval(10).pipe(
         take(2),
-        addDebugTag('source'),
+        addDebugTag("source"),
         withLatestFrom(deferredCount),
-        addDebugTag('merged'),
+        addDebugTag("merged"),
         map(([a, b]) => a + b),
-        addDebugTag('result'),
+        addDebugTag("result"),
         share()
       );
 
@@ -375,21 +377,21 @@ describe('patchObservable', () => {
         .pipe(
           takeLast(1),
           withLatestFrom(tagValue$),
-          map(([_, tags]) => tags)
+          map(([, tags]) => tags)
         )
         .toPromise();
 
-      expect(tags.result.refs).toEqual(['merged']);
-      expect(tags.merged.refs).toEqual(['result', 'source']);
+      expect(tags.result.refs).toEqual(["merged"]);
+      expect(tags.merged.refs).toEqual(["result", "source"]);
       expect(tags.source.refs).toEqual([]);
     });
 
-    it('references up to the parent with multiple subscriptions', async () => {
+    it("references up to the parent with multiple subscriptions", async () => {
       const stream = of(1).pipe(
-        addDebugTag('source'),
-        addDebugTag('middle'),
+        addDebugTag("source"),
+        addDebugTag("middle"),
         endWith(5),
-        addDebugTag('result')
+        addDebugTag("result")
       );
       stream.subscribe();
       const tags = await stream
@@ -397,27 +399,27 @@ describe('patchObservable', () => {
           takeLast(1),
           delay(0),
           withLatestFrom(tagValue$),
-          map(([_, tags]) => tags)
+          map(([, tags]) => tags)
         )
         .toPromise();
 
-      expect(tags.result.refs).toEqual(['middle']);
-      expect(tags.middle.refs).toEqual(['source']);
+      expect(tags.result.refs).toEqual(["middle"]);
+      expect(tags.middle.refs).toEqual(["source"]);
       expect(tags.source.refs).toEqual([]);
     });
   });
 
-  it('improves stack traces', async () => {
+  it("improves stack traces", async () => {
     const source: Observable<number> = interval(10).pipe(
       take(5),
-      addDebugTag('source'),
+      addDebugTag("source"),
       map((a) => {
         if (a > 2) {
-          throw new Error('next error');
+          throw new Error("next error");
         }
         return a;
       }),
-      addDebugTag('result')
+      addDebugTag("result")
     );
 
     const result = source
@@ -428,8 +430,8 @@ describe('patchObservable', () => {
     try {
       await result;
     } catch (ex) {
-      expect(ex.detectedIn).toEqual(['result']);
-      expect(findTagRefs(source)).toEqual(['source']);
+      expect(ex.detectedIn).toEqual(["result"]);
+      expect(findTagRefs(source)).toEqual(["source"]);
     }
   });
 });

@@ -1,7 +1,6 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
-  "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "files": [
     "dist",
@@ -11,23 +10,20 @@
     "node": ">=10"
   },
   "scripts": {
-    "start": "tsdx watch",
-    "build": "tsdx build",
-    "test": "tsdx test",
-    "lint": "tsdx lint src",
-    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md}\"",
-    "prepare": "tsdx build"
+    "build": "node ../../buildPackage.mjs devtools --css",
+    "lint": "eslint src/**/*",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md}\""
   },
   "peerDependencies": {},
   "name": "rxjs-traces-devtools",
   "author": "Víctor Oliva",
   "module": "dist/devtools.esm.js",
-  "devDependencies": {
-    "rollup-plugin-css-only": "^2.1.0"
-  },
   "dependencies": {
     "@react-rxjs/core": "^0.8.0",
     "@react-rxjs/utils": "^0.8.2",
-    "rxjs-traces": "0.1.0-alpha.10"
+    "rxjs-traces": "0.2.0-alpha.1",
+    "vis-data": "^6.6.1",
+    "vis-network": "^7.10.0",
+    "vis-util": "^4.3.3"
   }
 }

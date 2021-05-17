@@ -1,33 +1,33 @@
-import { Subject } from "rxjs"
-import { connectState } from "./stateProxy"
-import { createState } from "./state"
+import { Subject } from "rxjs";
+import { connectState } from "./stateProxy";
+import { createState } from "./state";
 
 export const connectStandalone = () => {
   const newTag$ = new Subject<{
-    id: string
-    label: string
-  }>()
+    id: string;
+    label: string;
+  }>();
 
   const tagSubscription$ = new Subject<{
-    id: string
-    sid: string
-  }>()
+    id: string;
+    sid: string;
+  }>();
 
   const tagUnsubscription$ = new Subject<{
-    id: string
-    sid: string
-  }>()
+    id: string;
+    sid: string;
+  }>();
 
   const tagValueChange$ = new Subject<{
-    id: string
-    sid: string
-    value: any
-  }>()
+    id: string;
+    sid: string;
+    value: any;
+  }>();
 
   const tagRefDetection$ = new Subject<{
-    id: string
-    ref: string
-  }>()
+    id: string;
+    ref: string;
+  }>();
 
   const requestMessages = () => {
     window.postMessage(
@@ -35,47 +35,47 @@ export const connectStandalone = () => {
         source: "rxjs-traces-devtools",
         type: "receive",
       },
-      window.location.origin,
-    )
-  }
+      window.location.origin
+    );
+  };
 
-  let historyReceived = false
+  let historyReceived = false;
   const handleMessage = (event: MessageEvent) => {
-    const { data, origin } = event
+    const { data, origin } = event;
 
     if (origin !== window.location.origin) {
-      return
+      return;
     }
 
     function consumeEvent(evt: any) {
       switch (evt.type) {
         case "newTag$":
-          return newTag$.next(evt.payload)
+          return newTag$.next(evt.payload);
         case "tagSubscription$":
-          return tagSubscription$.next(evt.payload)
+          return tagSubscription$.next(evt.payload);
         case "tagUnsubscription$":
-          return tagUnsubscription$.next(evt.payload)
+          return tagUnsubscription$.next(evt.payload);
         case "tagValueChange$":
-          return tagValueChange$.next(evt.payload)
+          return tagValueChange$.next(evt.payload);
         case "tagRefDetection$":
-          return tagRefDetection$.next(evt.payload)
+          return tagRefDetection$.next(evt.payload);
       }
     }
 
     if (typeof data === "object" && data.source === "rxjs-traces") {
       if (data.type === "connected") {
-        historyReceived = false
-        requestMessages()
+        historyReceived = false;
+        requestMessages();
       } else if (!historyReceived && data.type === "event-history") {
-        historyReceived = true
-        data.payload.forEach(consumeEvent)
+        historyReceived = true;
+        data.payload.forEach(consumeEvent);
       } else {
         if (historyReceived) {
-          consumeEvent(data)
+          consumeEvent(data);
         }
       }
     }
-  }
+  };
 
   const state = createState({
     newTag$,
@@ -83,12 +83,12 @@ export const connectStandalone = () => {
     tagUnsubscription$,
     tagValueChange$,
     tagRefDetection$,
-  })
+  });
 
-  connectState(state)
+  connectState(state);
 
-  window.addEventListener("message", handleMessage, false)
-  requestMessages()
+  window.addEventListener("message", handleMessage, false);
+  requestMessages();
 
-  return state
-}
+  return state;
+};

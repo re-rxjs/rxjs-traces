@@ -1,22 +1,22 @@
-import * as React from "react"
-import { useState } from "react"
+import * as React from "react";
+import { useState } from "react";
 import {
   FilterBar,
   TagOverlay,
   TimeTravelSlider,
   Visualization,
-} from "./components"
+} from "./components";
 
 interface TagSelection {
-  id: string
-  x: number
-  y: number
+  id: string;
+  x: number;
+  y: number;
 }
 export const DevTools: React.FC<{
-  onCopy?: (value: string) => void
+  onCopy?: (value: string) => void;
 }> = ({ onCopy = () => void 0 }) => {
-  const [selectedTag, setSelectedTag] = useState<TagSelection | null>(null)
-  const [filter, setFilter] = useState("")
+  const [selectedTag, setSelectedTag] = useState<TagSelection | null>(null);
+  const [filter, setFilter] = useState("");
 
   return (
     <>
@@ -36,5 +36,5 @@ export const DevTools: React.FC<{
       )}
       <TimeTravelSlider />
     </>
-  )
-}
+  );
+};
