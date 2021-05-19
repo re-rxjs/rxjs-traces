@@ -1,5 +1,6 @@
 import { mergeWithKey } from "@react-rxjs/utils";
-import { isObservable } from "rxjs";
+import { isObservable, Observable } from "rxjs";
+import { bufferWhen, connect, switchMapTo, take } from "rxjs/operators";
 import {
   newTag$,
   tagRefDetection$,
@@ -58,40 +59,46 @@ export function initDevtools() {
       newTag$,
       tagSubscription$,
       tagUnsubscription$,
-      tagValueChange$,
+      tagValueChange$: tagValueChange$.pipe(
+        connect((shared) =>
+          skip(shared).pipe(
+            bufferWhen(() =>
+              skip(shared).pipe(take(1), switchMapTo(skip(microTask$)))
+            )
+          )
+        )
+      ),
       tagRefDetection$,
     })
-  ).subscribe(({ type, payload }) => {
-    const value = (payload as any).value;
-    if (
-      type === "tagValueChange$" &&
-      typeof value === "object" &&
-      value !== null
-    ) {
+  ).subscribe((res) => {
+    if (res.type === "tagValueChange$") {
       pastHistory.push({
-        type,
-        payload: {
-          ...payload,
-          // Wrap the payload into a WeakRef so that it can get garbage collected.
-          value: new WeakRefCtor(value),
-        },
+        type: res.type,
+        payload: res.payload.map((v) => ({
+          ...v,
+          value:
+            typeof v.value === "object" && v.value !== null
+              ? // Wrap the payload into a WeakRef so that it can get garbage collected.
+                new WeakRefCtor(v.value)
+              : v.value,
+        })),
       });
     } else {
-      pastHistory.push({ type, payload });
+      pastHistory.push(res);
     }
 
     try {
       window.postMessage(
         {
           source: "rxjs-traces",
-          type,
-          payload: prepareForTransmit(payload),
+          type: res.type,
+          payload: prepareForTransmit(res.payload),
         },
         window.location.origin
       );
     } catch (ex) {
       if (ex.name === "DataCloneError") {
-        console.warn(`Can't transmit object to devtools`, payload, ex);
+        console.warn(`Can't transmit object to devtools`, res.payload, ex);
       } else {
         throw ex;
       }
@@ -174,3 +181,11 @@ function prepareForTransmit<T>(
       return value;
   }
 }
+
+const microTask$ = new Observable<void>((obs) => {
+  queueMicrotask(() => {
+    if (obs.closed) return;
+    obs.next();
+    obs.complete();
+  });
+});

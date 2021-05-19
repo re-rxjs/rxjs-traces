@@ -18,11 +18,13 @@ export const connectStandalone = () => {
     sid: string;
   }>();
 
-  const tagValueChange$ = new Subject<{
-    id: string;
-    sid: string;
-    value: any;
-  }>();
+  const tagValueChange$ = new Subject<
+    Array<{
+      id: string;
+      sid: string;
+      value: any;
+    }>
+  >();
 
   const tagRefDetection$ = new Subject<{
     id: string;

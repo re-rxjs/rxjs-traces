@@ -1,9 +1,7 @@
 import { combineKeys, partitionByKey } from "@react-rxjs/utils";
-import { tagValueById$ } from "../historySlice";
-import { BehaviorSubject, combineLatest, EMPTY, from, timer } from "rxjs";
+import { BehaviorSubject, combineLatest, concat, EMPTY, timer } from "rxjs";
 import {
   catchError,
-  concatMap,
   filter,
   map,
   mapTo,
@@ -17,6 +15,7 @@ import {
   tap,
 } from "rxjs/operators";
 import { DataSet, EdgeOptions, NodeOptions } from "vis-network/standalone";
+import { tagValueById$ } from "../historySlice";
 import { mergeKeys } from "../operators/mergeKeys";
 import { tagDefById$, tagId$ } from "../stateProxy";
 
@@ -33,27 +32,9 @@ const nodeColors = {
   highlight: "#ffb347",
 };
 
-/**
- * Can't alpha-blend with vis-network afaik.
- * Used https://meyerweb.com/eric/tools/color-blend/#97C2FC:FFB347:10:hex to
- * generate this sequence.
- */
-const highlightSequence = [
-  "#FFB347",
-  "#F6B457",
-  "#ECB668",
-  "#E3B778",
-  "#D9B889",
-  "#D0BA99",
-  "#C6BBAA",
-  "#BDBDBA",
-  "#B3BECB",
-  "#AABFDB",
-  "#A0C1EC",
-  "#97C2FC",
-];
-const highlightSequence$ = from(highlightSequence).pipe(
-  concatMap((v) => timer(500 / highlightSequence.length).pipe(mapTo(v)))
+const highlightSequence$ = concat(
+  [nodeColors.highlight],
+  timer(500).pipe(mapTo(nodeColors.default))
 );
 
 const getVizNodeState = (id: string, label: string) => {

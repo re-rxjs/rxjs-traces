@@ -8,6 +8,7 @@ import {
   take,
   switchMap,
   startWith,
+  concatMap,
 } from "rxjs/operators";
 
 export interface TagState {
@@ -71,11 +72,13 @@ export function createState(input: {
     id: string;
     sid: string;
   }>;
-  tagValueChange$: Observable<{
-    id: string;
-    sid: string;
-    value: any;
-  }>;
+  tagValueChange$: Observable<
+    Array<{
+      id: string;
+      sid: string;
+      value: any;
+    }>
+  >;
   tagRefDetection$: Observable<{
     id: string;
     ref: string;
@@ -96,7 +99,20 @@ export function createState(input: {
   });
 
   const [tagValueHistoryById$] = partitionByKey(
-    tagAction$,
+    tagAction$.pipe(
+      concatMap((action) => {
+        if (action.type === "tagValueChange$") {
+          return action.payload.payload.map((change) => ({
+            ...action,
+            payload: {
+              ...action.payload,
+              payload: change,
+            },
+          }));
+        }
+        return [action];
+      })
+    ),
     (action) => action.payload.payload.id,
     (action$) =>
       action$.pipe(
