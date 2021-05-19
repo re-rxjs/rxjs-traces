@@ -12,6 +12,7 @@ export {
   tagSubscription$,
   tagUnsubscription$,
 } from "./changes";
+export { skip } from "./skip";
 export { patchObservable } from "./patchObservable";
 export { patchOperator } from "./patchOperator";
 export { createLink } from "./link";

@@ -7,6 +7,7 @@ import {
   tagUnsubscription$,
   tagValueChange$,
 } from "./changes";
+import { skip } from "./skip";
 
 // For subscribers that are late (i.e. devtools take some time to initialize) we must keep old events.
 const pastHistory: any[] = [];
@@ -52,13 +53,15 @@ const WeakRefCtor: typeof WeakRef =
   };
 
 export function initDevtools() {
-  mergeWithKey({
-    newTag$,
-    tagSubscription$,
-    tagUnsubscription$,
-    tagValueChange$,
-    tagRefDetection$,
-  }).subscribe(({ type, payload }) => {
+  skip(
+    mergeWithKey({
+      newTag$,
+      tagSubscription$,
+      tagUnsubscription$,
+      tagValueChange$,
+      tagRefDetection$,
+    })
+  ).subscribe(({ type, payload }) => {
     const value = (payload as any).value;
     if (
       type === "tagValueChange$" &&

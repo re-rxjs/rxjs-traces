@@ -28,7 +28,6 @@ import {
 } from "rxjs/operators";
 import { addDebugTag, patchObservable, tagValue$ } from "../src";
 import { resetTag$ } from "../src/changes";
-import { findTagRefs } from "../src/metadata";
 import { restoreObservable } from "../src/patchObservable";
 
 afterEach(() => {
@@ -310,10 +309,6 @@ describe("patchObservable", () => {
       expect(tags.source2.refs).toEqual([]);
     });
 
-    /** It fails because current implementation uses synchronous subscriptions
-     * to link streams toghether, and concat won't subscribe to the next
-     * observable until the first hasn't completed
-     */
     it("detects references from creation operators", async () => {
       const createSource = (id: number) =>
         of(id).pipe(delay(10), addDebugTag("source" + id));
@@ -431,7 +426,6 @@ describe("patchObservable", () => {
       await result;
     } catch (ex) {
       expect(ex.detectedIn).toEqual(["result"]);
-      expect(findTagRefs(source)).toEqual(["source"]);
     }
   });
 });

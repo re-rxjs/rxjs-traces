@@ -1,17 +1,15 @@
 import {
+  firstValueFrom,
   Observable,
   Observer,
   Operator,
   Subscriber,
   Subscription,
   TeardownLogic,
+  timer,
 } from "rxjs";
-import {
-  detectRefChanges,
-  findReverseTagRefs,
-  findTagRefs,
-  getMetadata,
-} from "./metadata";
+import { takeUntil, toArray } from "rxjs/operators";
+import { getMetadata } from "./metadata";
 
 const Patched = Symbol("patched");
 export const isPatched = (fn: object) => Boolean(fn && (fn as any)[Patched]);
@@ -41,7 +39,7 @@ export function patchObservable(ObservableCtor: typeof Observable) {
   ): Subscription {
     const metadata = getMetadata(this);
     const observerArg = getObserver(observerOrNext, error, complete);
-    const observer = addErrorDetection(observerArg, this, metadata.tag);
+    const observer = addErrorDetection(observerArg, this, metadata.getTag());
 
     /** Imagine this case, the most simple one:
 
@@ -66,13 +64,12 @@ export function patchObservable(ObservableCtor: typeof Observable) {
       !isPatched((this as any)._subscribe)
     ) {
       const patched_subscribe: (subscriber: Subscriber<any>) => TeardownLogic =
-        (subscriber) =>
-          detectRefChanges(() => {
-            observableStack.push([this]);
-            const result = (this as any)._subscribe(subscriber);
-            observableStack.pop();
-            return result;
-          }, [this]);
+        (subscriber) => {
+          observableStack.push([this]);
+          const result = (this as any)._subscribe(subscriber);
+          observableStack.pop();
+          return result;
+        };
       markAsPatched(patched_subscribe);
       overridenThis = Object.create(overridenThis, {
         _subscribe: {
@@ -83,13 +80,12 @@ export function patchObservable(ObservableCtor: typeof Observable) {
 
     if (this.operator && !isPatched(this.operator)) {
       const patchedOperator: Operator<any, T> = {
-        call: (subscriber, source) =>
-          detectRefChanges(() => {
-            observableStack.push([this]);
-            const teardown = this.operator?.call(subscriber, source);
-            observableStack.pop();
-            return teardown;
-          }, [this]),
+        call: (subscriber, source) => {
+          observableStack.push([this]);
+          const teardown = this.operator?.call(subscriber, source);
+          observableStack.pop();
+          return teardown;
+        },
       };
       markAsPatched(patchedOperator);
       overridenThis = Object.create(overridenThis, {
@@ -106,8 +102,8 @@ export function patchObservable(ObservableCtor: typeof Observable) {
        */
       const top = observableStack[observableStack.length - 1];
       top.forEach((observable) => {
-        getMetadata(observable).refs.add(this);
-        metadata.reverseRefs.add(observable);
+        getMetadata(observable).addDependency(this);
+        metadata.dependants.add(observable);
       });
     }
 
@@ -118,16 +114,11 @@ export function patchObservable(ObservableCtor: typeof Observable) {
          * top of the observable stack, (`this` is the inner
          * observable, and we want its child, the one that `concat` returns)
          */
-        if (metadata.reverseRefs.size) {
-          const reverseRefValues = Array.from(metadata.reverseRefs.values());
-          const dependantTagRefs = reverseRefValues.flatMap((ref) =>
-            findReverseTagRefs(ref)
-          );
-          detectRefChanges(() => {
-            observableStack.push(reverseRefValues);
-            observer.complete();
-            observableStack.pop();
-          }, dependantTagRefs);
+        if (metadata.dependants.size) {
+          const reverseRefValues = Array.from(metadata.dependants.values());
+          observableStack.push(reverseRefValues);
+          observer.complete();
+          observableStack.pop();
         } else {
           observer.complete();
         }
@@ -137,16 +128,11 @@ export function patchObservable(ObservableCtor: typeof Observable) {
          * subscription to fire of. In this case `this` is the parent stream
          * of `switchMap`, so we also need to grab its child.
          */
-        if (metadata.reverseRefs.size) {
-          const reverseRefValues = Array.from(metadata.reverseRefs.values());
-          const dependantTagRefs = reverseRefValues.flatMap((ref) =>
-            findReverseTagRefs(ref)
-          );
-          detectRefChanges(() => {
-            observableStack.push(reverseRefValues);
-            observer.next(value);
-            observableStack.pop();
-          }, dependantTagRefs);
+        if (metadata.dependants.size) {
+          const reverseRefValues = Array.from(metadata.dependants.values());
+          observableStack.push(reverseRefValues);
+          observer.next(value);
+          observableStack.pop();
         } else {
           observer.next(value);
         }
@@ -158,19 +144,7 @@ export function patchObservable(ObservableCtor: typeof Observable) {
       observer.add(overridenObserver as Subscriber<any>);
     }
 
-    const subscription = callOriginalSubscribe(
-      overridenThis,
-      overridenObserver
-    );
-    subscription.add(() => {
-      // When new observables are created in different subscriptions (e.g. using a defer), reverseRefs
-      // start growing indefinetly for every subscribe. Here we clean them up when the current
-      // subscription finishes
-      metadata.refs.forEach((obs) => {
-        getMetadata(obs).reverseRefs.delete(this);
-      });
-    });
-    return subscription;
+    return callOriginalSubscribe(overridenThis, overridenObserver);
   };
   markAsPatched(ObservableCtor);
 
@@ -232,11 +206,15 @@ interface EnhancedError extends Error {
   source?: Observable<unknown>;
   detectedIn?: Array<string>;
 }
-function onUncaughtException({ error }: ErrorEvent) {
+async function onUncaughtException({ error }: ErrorEvent) {
   if (error instanceof Error) {
     const enhancedError = error as EnhancedError;
     if (enhancedError.source) {
-      const refs = findTagRefs(enhancedError.source);
+      const refs = await firstValueFrom(
+        getMetadata(enhancedError.source)
+          .getDependencies$()
+          .pipe(takeUntil(timer(0)), toArray())
+      );
       if (refs.length)
         console.warn(
           "rxjs-traces detected error came in stream with references to: [" +

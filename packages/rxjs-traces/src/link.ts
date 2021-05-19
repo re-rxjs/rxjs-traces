@@ -10,8 +10,8 @@ export const createLink = () => {
     <T>(producer: Observable<T>) => {
       producerEndRefs.add(producer);
       consumerEndRefs.forEach((consumer) => {
-        getMetadata(consumer).refs.add(producer);
-        getMetadata(producer).reverseRefs.add(consumer);
+        getMetadata(consumer).addDependency(producer);
+        getMetadata(producer).dependants.add(consumer);
       });
 
       return producer;
@@ -39,8 +39,8 @@ export const createLink = () => {
 
       consumerEndRefs.add(deferredConsumer);
       producerEndRefs.forEach((producer) => {
-        getMetadata(deferredConsumer).refs.add(producer);
-        getMetadata(producer).reverseRefs.add(deferredConsumer);
+        getMetadata(deferredConsumer).addDependency(producer);
+        getMetadata(producer).dependants.add(deferredConsumer);
       });
 
       return deferredConsumer;

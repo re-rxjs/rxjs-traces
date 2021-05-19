@@ -1,34 +1,45 @@
 import { mergeWithKey } from "@react-rxjs/utils";
 import { Observable, ReplaySubject, Subject } from "rxjs";
 import { distinctUntilChanged, scan, share, startWith } from "rxjs/operators";
+import { skip } from "./skip";
 
-export const newTag$ = new ReplaySubject<{
-  id: string;
-  label: string;
-}>();
+export const newTag$ = skip(
+  new ReplaySubject<{
+    id: string;
+    label: string;
+  }>()
+);
 
-export const tagSubscription$ = new Subject<{
-  id: string;
-  sid: string;
-}>();
+export const tagSubscription$ = skip(
+  new Subject<{
+    id: string;
+    sid: string;
+  }>()
+);
 
-export const tagUnsubscription$ = new Subject<{
-  id: string;
-  sid: string;
-}>();
+export const tagUnsubscription$ = skip(
+  new Subject<{
+    id: string;
+    sid: string;
+  }>()
+);
 
-export const tagValueChange$ = new Subject<{
-  id: string;
-  sid: string;
-  value: any;
-}>();
+export const tagValueChange$ = skip(
+  new Subject<{
+    id: string;
+    sid: string;
+    value: any;
+  }>()
+);
 
-export const tagRefDetection$ = new Subject<{
-  id: string;
-  ref: string;
-}>();
+export const tagRefDetection$ = skip(
+  new Subject<{
+    id: string;
+    ref: string;
+  }>()
+);
 
-const tagReset$ = new Subject<void>();
+const tagReset$ = skip(new Subject<void>());
 
 export interface DebugTag {
   id: string;
@@ -37,14 +48,16 @@ export interface DebugTag {
   latestValues: Record<string, any>;
 }
 
-export const tagValue$: Observable<Record<string, DebugTag>> = mergeWithKey({
-  tagReset$,
-  newTag$,
-  tagSubscription$,
-  tagUnsubscription$,
-  tagValueChange$,
-  tagRefDetection$,
-}).pipe(
+export const tagValue$: Observable<Record<string, DebugTag>> = skip(
+  mergeWithKey({
+    tagReset$,
+    newTag$,
+    tagSubscription$,
+    tagUnsubscription$,
+    tagValueChange$,
+    tagRefDetection$,
+  })
+).pipe(
   scan((state, action) => {
     switch (action.type) {
       case "tagReset$":

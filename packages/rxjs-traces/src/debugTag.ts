@@ -3,6 +3,7 @@ import { finalize, tap } from "rxjs/operators";
 import { v4 as uuid } from "uuid";
 import {
   newTag$,
+  tagRefDetection$,
   tagSubscription$,
   tagUnsubscription$,
   tagValueChange$,
@@ -51,7 +52,10 @@ export const addDebugTag =
     });
 
     const metadata = getMetadata(result);
-    metadata.tag = id;
+    metadata.setTag(id);
+    metadata
+      .getDependencies$()
+      .subscribe((ref) => tagRefDetection$.next({ id, ref }));
 
     return result;
   };

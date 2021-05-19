@@ -1,12 +1,46 @@
-import { Observable } from "rxjs";
-import { tagRefDetection$ } from "./changes";
+import { BehaviorSubject, Observable, of, ReplaySubject } from "rxjs";
+import { distinct, mergeAll, share, switchMap } from "rxjs/operators";
+import { skip } from "./skip";
 
-interface ObservableMetadata {
-  tag: string | null;
-  refs: Set<Observable<unknown>>;
+class ObservableMetadata {
+  private dependencies$ = skip(new ReplaySubject<Observable<string>>());
+  private tag$ = skip(new BehaviorSubject<string | null>(null));
+  private tagDependencies$ = this.dependencies$.pipe(
+    mergeAll(),
+    distinct(),
+    share({
+      connector: () => skip(new ReplaySubject<string>()),
+      resetOnRefCountZero: true,
+    })
+  );
 
-  // Advanced stuff for concatMap
-  reverseRefs: Set<Observable<unknown>>; // Useful for tracking the ones that depend on it
+  public setTag(tag: string) {
+    this.tag$.next(tag);
+  }
+
+  public getTag() {
+    return this.tag$.getValue();
+  }
+
+  public getDependencies$() {
+    return this.tagDependencies$;
+  }
+
+  public addDependency(observable: Observable<unknown>) {
+    this.dependencies$.next(getMetadata(observable).getChainedDependencies$());
+  }
+
+  // When chaining we want to stop if this observable has a tag.
+  public getChainedDependencies$() {
+    return this.tag$.pipe(
+      switchMap((value) => (value === null ? this.tagDependencies$ : of(value)))
+    );
+  }
+
+  /**
+   * We need reverse dependencies (Dependants) to track new references in some operators (e.g. concat and switchMap)
+   */
+  public dependants = new Set<Observable<unknown>>();
 }
 
 /**
@@ -22,90 +56,8 @@ export const getMetadata = (
   observable: Observable<unknown>
 ): ObservableMetadata => {
   if (!hasMetadata(observable)) {
-    const defaultMetadata: ObservableMetadata = {
-      tag: null,
-      refs: new Set(),
-      reverseRefs: new Set(),
-    };
-    metadataStore.set(observable, defaultMetadata);
+    metadataStore.set(observable, new ObservableMetadata());
   }
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   return metadataStore.get(observable)!;
 };
-
-export const detectRefChanges = <T>(
-  fn: () => T,
-  targetInstances: Observable<unknown>[]
-) => {
-  const filteredInstances = targetInstances.filter(
-    (instance) => getMetadata(instance).tag
-  );
-  const before = filteredInstances.map(
-    (instance) => new Set(findTagRefs(instance))
-  );
-  const result = fn();
-  const after = filteredInstances.map((instance) => findTagRefs(instance));
-  for (let i = 0; i < filteredInstances.length; i++) {
-    if (after[i].length > before[i].size) {
-      after[i].forEach((ref) => {
-        const id = getMetadata(filteredInstances[i]).tag;
-        if (!before[i].has(ref) && id !== null) {
-          tagRefDetection$.next({
-            id,
-            ref,
-          });
-        }
-      });
-    }
-  }
-
-  return result;
-};
-
-export function findTagRefs(
-  observable: Observable<unknown>,
-  visited = new WeakSet<Observable<unknown>>()
-) {
-  if (visited.has(observable)) {
-    return [];
-  }
-  visited.add(observable);
-  const metadata = getMetadata(observable);
-
-  const tags = new Set<string>();
-  metadata.refs.forEach((ref) => {
-    const refMetadata = getMetadata(ref);
-    if (refMetadata.tag) {
-      tags.add(refMetadata.tag);
-    } else {
-      const tagRefs = findTagRefs(ref, visited);
-      tagRefs.forEach((tag) => tags.add(tag));
-    }
-  });
-
-  return Array.from(tags.values());
-}
-
-export function findReverseTagRefs(
-  observable: Observable<unknown>,
-  visited = new WeakSet<Observable<unknown>>()
-) {
-  if (visited.has(observable)) {
-    return [];
-  }
-  visited.add(observable);
-  const metadata = getMetadata(observable);
-
-  const refs = new Set<Observable<unknown>>();
-  metadata.reverseRefs.forEach((ref) => {
-    const refMetadata = getMetadata(ref);
-    if (refMetadata.tag) {
-      refs.add(ref);
-    } else {
-      const tagRefs = findReverseTagRefs(ref, visited);
-      tagRefs.forEach((ref) => refs.add(ref));
-    }
-  });
-
-  return Array.from(refs.values());
-}

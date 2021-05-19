@@ -1,5 +1,5 @@
 import { Observable } from "rxjs";
-import { getMetadata, findReverseTagRefs, detectRefChanges } from "./metadata";
+import { getMetadata } from "./metadata";
 
 export const patchOperator = <
   T extends (...args: any[]) => (source: Observable<any>) => Observable<any>
@@ -30,12 +30,8 @@ export const patchOperator = <
           }
 
           // It's a projection, we can link refs
-          const dependantTagRefs = findReverseTagRefs(source);
-          detectRefChanges(() => {
-            const resultMetadata = getMetadata(result);
-            resultMetadata.refs.add(argFnResult);
-            getMetadata(argFnResult).reverseRefs.add(result);
-          }, dependantTagRefs);
+          getMetadata(result).addDependency(argFnResult);
+          getMetadata(argFnResult).dependants.add(result);
           return argFnResult;
         };
       });
@@ -43,15 +39,13 @@ export const patchOperator = <
       const applied = operator(...mappedArgs);
       const result = applied(source);
       const resultMetadata = getMetadata(result);
-      const sourceMetadata = getMetadata(source);
 
-      resultMetadata.refs.add(source);
-      sourceMetadata.reverseRefs.add(result);
+      resultMetadata.addDependency(source);
+      getMetadata(source).dependants.add(result);
 
       streamArgs.forEach((arg) => {
-        const argMetadata = getMetadata(arg);
-        resultMetadata.refs.add(arg);
-        argMetadata.reverseRefs.add(result);
+        resultMetadata.addDependency(arg);
+        getMetadata(arg).dependants.add(result);
       });
       return result;
     };
