@@ -24,7 +24,7 @@ export const addDebugTag =
     childRefs.add(id);
 
     const result = defer(() => {
-      if (!isPatched(source.constructor) && !warningShown) {
+      if (!isPatched(source) && !warningShown) {
         console.warn(
           `addDebugTag is used without Observable being patched. Refs won't be detected`
         );

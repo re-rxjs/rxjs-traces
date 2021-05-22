@@ -183,9 +183,14 @@ function prepareForTransmit<T>(
 }
 
 const microTask$ = new Observable<void>((obs) => {
-  queueMicrotask(() => {
+  const run = () => {
     if (obs.closed) return;
     obs.next();
     obs.complete();
-  });
+  };
+  if('queueMicrotask' in globalThis) {
+    queueMicrotask(run);
+  } else {
+    Promise.resolve().then(run);
+  }
 });

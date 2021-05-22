@@ -146,14 +146,14 @@ export function patchObservable(ObservableCtor: typeof Observable) {
 
     return callOriginalSubscribe(overridenThis, overridenObserver);
   };
-  markAsPatched(ObservableCtor);
+  markAsPatched(ObservableCtor.prototype);
 
   globalThis.addEventListener("error", onUncaughtException);
 }
 export function restoreObservable(ObservableCtor: typeof Observable) {
   ObservableCtor.prototype.subscribe =
     originalSubscribe as typeof ObservableCtor.prototype.subscribe;
-  markAsPatched(ObservableCtor, false);
+  markAsPatched(ObservableCtor.prototype, false);
 
   globalThis.removeEventListener("error", onUncaughtException);
 }

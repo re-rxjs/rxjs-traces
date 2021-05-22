@@ -19,7 +19,7 @@
     "react-dom": "^16.13.1",
     "react-rxjs": "^3.0.0-alpha.5",
     "rxjs": "^7.0.1",
-    "rxjs-traces": "^0.1.0-alpha.1",
+    "rxjs-traces": "^0.1.0-alpha.1"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.104",
