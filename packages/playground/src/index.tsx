@@ -4,11 +4,11 @@ import "./index.css";
 import * as serviceWorker from "./serviceWorker";
 import { Observable } from "rxjs";
 import { patchObservable } from "rxjs-traces";
-// import { connectStandalone } from "rxjs-traces-devtools";
+import { connectStandalone } from "rxjs-traces-devtools";
 import App from "./App";
 
 patchObservable(Observable);
-// connectStandalone();
+connectStandalone();
 
 ReactDOM.render(
   <React.StrictMode>

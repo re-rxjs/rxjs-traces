@@ -378,10 +378,8 @@ describe("patchObservable", () => {
       const dependantA = source.pipe(addDebugTag("dependantA"));
       const dependantB = concat(
         source,
-        of(1).pipe(delay(1), addDebugTag('another'))
-      ).pipe(
-        addDebugTag("dependantB")
-      );
+        of(1).pipe(delay(1), addDebugTag("another"))
+      ).pipe(addDebugTag("dependantB"));
       const stream = merge(dependantA, dependantB);
       const tags = await stream
         .pipe(

@@ -106,7 +106,7 @@ export function patchObservable(ObservableCtor: typeof Observable) {
        * so it can grab `tagA`
        */
       const top = subscriptionStack[subscriptionStack.length - 1];
-      if(top) {
+      if (top) {
         getMetadata(top).addDependency(this);
       }
     }
@@ -118,7 +118,7 @@ export function patchObservable(ObservableCtor: typeof Observable) {
           // this observable has received something from the previous observable
           // The observable on the top is a dependency of this
           const top = nextStack[nextStack.length - 1];
-          if(top) {
+          if (top) {
             metadata.addDependency(top);
           }
         }

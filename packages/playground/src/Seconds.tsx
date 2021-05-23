@@ -38,14 +38,11 @@ function ErrorFallback({
 
 export function Seconds() {
   return (
-    <div className="App">
-      <ErrorBoundary FallbackComponent={ErrorFallback}>
-        <Subscribe fallback={null}>
-          <RandomComponent />
-        </Subscribe>
-      </ErrorBoundary>
-      <DevTools />
-    </div>
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <Subscribe fallback={null}>
+        <RandomComponent />
+      </Subscribe>
+    </ErrorBoundary>
   );
 }
 

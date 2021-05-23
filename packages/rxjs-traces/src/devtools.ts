@@ -188,7 +188,7 @@ const microTask$ = new Observable<void>((obs) => {
     obs.next();
     obs.complete();
   };
-  if('queueMicrotask' in globalThis) {
+  if ("queueMicrotask" in globalThis) {
     queueMicrotask(run);
   } else {
     Promise.resolve().then(run);
