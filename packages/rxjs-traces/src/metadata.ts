@@ -6,12 +6,16 @@ class ObservableMetadata {
   private dependencies$ = skip(new ReplaySubject<Observable<string>>());
   private tag$ = skip(new BehaviorSubject<string | null>(null));
   private tagDependencies$ = this.dependencies$.pipe(
+    distinct(),
     mergeAll(),
     distinct(),
     share({
       connector: () => skip(new ReplaySubject<string>()),
       resetOnRefCountZero: true,
     })
+  );
+  private chainedDependencies$ = this.tag$.pipe(
+    switchMap((value) => (value === null ? this.tagDependencies$ : of(value)))
   );
 
   public setTag(tag: string) {
@@ -27,20 +31,8 @@ class ObservableMetadata {
   }
 
   public addDependency(observable: Observable<unknown>) {
-    this.dependencies$.next(getMetadata(observable).getChainedDependencies$());
+    this.dependencies$.next(getMetadata(observable).chainedDependencies$);
   }
-
-  // When chaining we want to stop if this observable has a tag.
-  public getChainedDependencies$() {
-    return this.tag$.pipe(
-      switchMap((value) => (value === null ? this.tagDependencies$ : of(value)))
-    );
-  }
-
-  /**
-   * We need reverse dependencies (Dependants) to track new references in some operators (e.g. concat and switchMap)
-   */
-  public dependants = new Set<Observable<unknown>>();
 }
 
 /**

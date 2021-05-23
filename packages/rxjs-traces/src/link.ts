@@ -11,7 +11,6 @@ export const createLink = () => {
       producerEndRefs.add(producer);
       consumerEndRefs.forEach((consumer) => {
         getMetadata(consumer).addDependency(producer);
-        getMetadata(producer).dependants.add(consumer);
       });
 
       return producer;
@@ -40,7 +39,6 @@ export const createLink = () => {
       consumerEndRefs.add(deferredConsumer);
       producerEndRefs.forEach((producer) => {
         getMetadata(deferredConsumer).addDependency(producer);
-        getMetadata(producer).dependants.add(deferredConsumer);
       });
 
       return deferredConsumer;

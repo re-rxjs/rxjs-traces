@@ -29,7 +29,8 @@ const callOriginalSubscribe = <T>(
     observer
   );
 
-const observableStack: Array<Observable<unknown>[]> = [];
+const subscriptionStack: Array<Observable<unknown> | null> = [];
+const nextStack: Array<Observable<unknown> | null> = [];
 export function patchObservable(ObservableCtor: typeof Observable) {
   ObservableCtor.prototype.subscribe = function <T>(
     this: Observable<T>,
@@ -65,9 +66,11 @@ export function patchObservable(ObservableCtor: typeof Observable) {
     ) {
       const patched_subscribe: (subscriber: Subscriber<any>) => TeardownLogic =
         (subscriber) => {
-          observableStack.push([this]);
+          nextStack.push(null);
+          subscriptionStack.push(this);
           const result = (this as any)._subscribe(subscriber);
-          observableStack.pop();
+          subscriptionStack.pop();
+          nextStack.pop();
           return result;
         };
       markAsPatched(patched_subscribe);
@@ -81,9 +84,11 @@ export function patchObservable(ObservableCtor: typeof Observable) {
     if (this.operator && !isPatched(this.operator)) {
       const patchedOperator: Operator<any, T> = {
         call: (subscriber, source) => {
-          observableStack.push([this]);
+          nextStack.push(null);
+          subscriptionStack.push(this);
           const teardown = this.operator?.call(subscriber, source);
-          observableStack.pop();
+          subscriptionStack.pop();
+          nextStack.pop();
           return teardown;
         },
       };
@@ -95,47 +100,34 @@ export function patchObservable(ObservableCtor: typeof Observable) {
       });
     }
 
-    if (observableStack.length > 0) {
+    if (subscriptionStack.length > 0) {
       /** `this` is `source` in the example above ^^^
        * Meaning we need to pass our ref to the top of the observableStack
        * so it can grab `tagA`
        */
-      const top = observableStack[observableStack.length - 1];
-      top.forEach((observable) => {
-        getMetadata(observable).addDependency(this);
-        metadata.dependants.add(observable);
-      });
+      const top = subscriptionStack[subscriptionStack.length - 1];
+      if(top) {
+        getMetadata(top).addDependency(this);
+      }
     }
 
     let overridenObserver: Observer<T> = {
-      complete: () => {
-        /** Case concat: When a source completes, it synchronously causes
-         * a subscription to fire of. So we set the child of `this` to be the
-         * top of the observable stack, (`this` is the inner
-         * observable, and we want its child, the one that `concat` returns)
-         */
-        if (metadata.dependants.size) {
-          const reverseRefValues = Array.from(metadata.dependants.values());
-          observableStack.push(reverseRefValues);
-          observer.complete();
-          observableStack.pop();
-        } else {
-          observer.complete();
-        }
-      },
+      complete: () => observer.complete(),
       next: (value) => {
-        /** Case switchMap: When the source emits, it synchronously causes a new
-         * subscription to fire of. In this case `this` is the parent stream
-         * of `switchMap`, so we also need to grab its child.
-         */
-        if (metadata.dependants.size) {
-          const reverseRefValues = Array.from(metadata.dependants.values());
-          observableStack.push(reverseRefValues);
-          observer.next(value);
-          observableStack.pop();
-        } else {
-          observer.next(value);
+        if (nextStack.length > 0) {
+          // this observable has received something from the previous observable
+          // The observable on the top is a dependency of this
+          const top = nextStack[nextStack.length - 1];
+          if(top) {
+            metadata.addDependency(top);
+          }
         }
+
+        subscriptionStack.push(null);
+        nextStack.push(this);
+        observer.next(value);
+        nextStack.pop();
+        subscriptionStack.pop();
       },
       error: (err) => observer.error(err),
     };

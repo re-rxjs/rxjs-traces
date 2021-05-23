@@ -442,7 +442,7 @@ describe("patchObservable", () => {
         .toPromise();
 
       expect(tags.result.refs).toEqual(["merged"]);
-      expect(tags.merged.refs).toEqual(["result", "source"]);
+      expect(tags.merged.refs).toEqual(["source", "result"]);
       expect(tags.source.refs).toEqual([]);
     });
 

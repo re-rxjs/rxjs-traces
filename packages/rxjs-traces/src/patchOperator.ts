@@ -31,7 +31,6 @@ export const patchOperator = <
 
           // It's a projection, we can link refs
           getMetadata(result).addDependency(argFnResult);
-          getMetadata(argFnResult).dependants.add(result);
           return argFnResult;
         };
       });
@@ -41,11 +40,9 @@ export const patchOperator = <
       const resultMetadata = getMetadata(result);
 
       resultMetadata.addDependency(source);
-      getMetadata(source).dependants.add(result);
 
       streamArgs.forEach((arg) => {
         resultMetadata.addDependency(arg);
-        getMetadata(arg).dependants.add(result);
       });
       return result;
     };
