@@ -284,6 +284,27 @@ describe("patchObservable", () => {
       expect(tags.inner.refs).toEqual([]);
     });
 
+    it("doesn't cross-reference streams with async operators", async () => {
+      const source = of(1).pipe(delay(0), addDebugTag("source"));
+      const dependantA = source.pipe(addDebugTag("dependantA"));
+      const dependantB = source.pipe(
+        switchMap((v) => of(v).pipe(delay(10), addDebugTag("inner"))),
+        addDebugTag("dependantB")
+      );
+      const stream = merge(dependantA, dependantB);
+      const tags = await stream
+        .pipe(
+          takeLast(1),
+          withLatestFrom(tagValue$),
+          map(([, tags]) => tags)
+        )
+        .toPromise();
+
+      expect(tags.source.refs).toEqual([]);
+      expect(tags.dependantA.refs).toEqual(["source"]);
+      expect(tags.dependantB.refs).toEqual(["source", "inner"]);
+    });
+
     it("detects references from argument streams", async () => {
       const createSource = (id: number) =>
         of(id).pipe(delay(10), addDebugTag("source" + id));
@@ -309,6 +330,27 @@ describe("patchObservable", () => {
       expect(tags.source2.refs).toEqual([]);
     });
 
+    it("doesn't cross-reference streams from argument streams", async () => {
+      const source = of(1).pipe(delay(0), addDebugTag("source"));
+      const dependantA = source.pipe(addDebugTag("dependantA"));
+      const dependantB = source.pipe(
+        withLatestFrom(of(1).pipe(delay(0), addDebugTag("inner"))),
+        addDebugTag("dependantB")
+      );
+      const stream = merge(dependantA, dependantB);
+      const tags = await stream
+        .pipe(
+          takeLast(1),
+          withLatestFrom(tagValue$),
+          map(([, tags]) => tags)
+        )
+        .toPromise();
+
+      expect(tags.source.refs).toEqual([]);
+      expect(tags.dependantA.refs).toEqual(["source"]);
+      expect(tags.dependantB.refs).toEqual(["inner", "source"]);
+    });
+
     it("detects references from creation operators", async () => {
       const createSource = (id: number) =>
         of(id).pipe(delay(10), addDebugTag("source" + id));
@@ -329,6 +371,29 @@ describe("patchObservable", () => {
       expect(tags.result.refs).toEqual(["source1", "source2"]);
       expect(tags.source1.refs).toEqual([]);
       expect(tags.source2.refs).toEqual([]);
+    });
+
+    it("doesn't cross-reference streams from creation operators", async () => {
+      const source = of(1).pipe(delay(0), addDebugTag("source"));
+      const dependantA = source.pipe(addDebugTag("dependantA"));
+      const dependantB = concat(
+        source,
+        of(1).pipe(delay(1), addDebugTag('another'))
+      ).pipe(
+        addDebugTag("dependantB")
+      );
+      const stream = merge(dependantA, dependantB);
+      const tags = await stream
+        .pipe(
+          takeLast(1),
+          withLatestFrom(tagValue$),
+          map(([, tags]) => tags)
+        )
+        .toPromise();
+
+      expect(tags.source.refs).toEqual([]);
+      expect(tags.dependantA.refs).toEqual(["source"]);
+      expect(tags.dependantB.refs).toEqual(["source", "another"]);
     });
 
     it("works across custom shared operators", async () => {
