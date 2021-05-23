@@ -1,14 +1,15 @@
 import { mergeWithKey, partitionByKey } from "@react-rxjs/utils";
 import { Observable } from "rxjs";
+import { skip } from "rxjs-traces";
 import {
-  scan,
-  map,
-  tap,
-  share,
-  take,
-  switchMap,
-  startWith,
   concatMap,
+  map,
+  scan,
+  share,
+  startWith,
+  switchMap,
+  take,
+  tap,
 } from "rxjs/operators";
 
 export interface TagState {
@@ -100,6 +101,7 @@ export function createState(input: {
 
   const [tagValueHistoryById$] = partitionByKey(
     tagAction$.pipe(
+      skip,
       concatMap((action) => {
         if (action.type === "tagValueChange$") {
           return action.payload.payload.map((change) => ({
@@ -117,7 +119,7 @@ export function createState(input: {
     (action$) =>
       action$.pipe(
         scan((history, action) => {
-          let newValue: TagState = {
+          const newValue: TagState = {
             sequenceNumber: action.payload.sequenceNumber,
             subscriptions: history.length
               ? history[history.length - 1].subscriptions
@@ -192,5 +194,9 @@ export function createState(input: {
       )
   );
 
-  return { tagValueHistoryById$, tagDefById$, tagId$ };
+  return {
+    tagValueHistoryById$: (id) => skip(tagValueHistoryById$(id)),
+    tagDefById$: (id) => skip(tagDefById$(id)),
+    tagId$: skip(tagId$),
+  };
 }

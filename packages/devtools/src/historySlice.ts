@@ -1,22 +1,27 @@
 import { combineKeys } from "@react-rxjs/utils";
 import { BehaviorSubject, combineLatest } from "rxjs";
+import { skip } from "rxjs-traces";
 import { distinctUntilChanged, filter, map } from "rxjs/operators";
 import { tagId$, tagValueHistoryById$ } from "./stateProxy";
 
-export const slice$ = new BehaviorSubject<number | null>(null);
+export const slice$ = skip(new BehaviorSubject<number | null>(null));
 
 export const historyLength$ = combineKeys(tagId$, (id) =>
   tagValueHistoryById$(id).pipe(
     map((v) => v[v.length - 1]?.sequenceNumber),
     filter((v) => v !== undefined)
   )
-).pipe(map((v) => Math.max(0, ...Array.from(v.values()))));
+).pipe(
+  skip,
+  map((v) => Math.max(0, ...Array.from(v.values())))
+);
 
 export const tagValueById$ = (id: string) =>
   combineLatest({
     slice: slice$,
     tagHistory: tagValueHistoryById$(id),
   }).pipe(
+    skip,
     map(({ slice, tagHistory }) => {
       if (slice === null) {
         return tagHistory[tagHistory.length - 1];

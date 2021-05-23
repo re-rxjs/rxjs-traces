@@ -1,35 +1,46 @@
 import { Subject } from "rxjs";
-import { connectState } from "./stateProxy";
+import { skip } from "rxjs-traces";
 import { createState } from "./state";
+import { connectState } from "./stateProxy";
 
 export const connectStandalone = () => {
-  const newTag$ = new Subject<{
-    id: string;
-    label: string;
-  }>();
+  const newTag$ = skip(
+    new Subject<{
+      id: string;
+      label: string;
+    }>()
+  );
 
-  const tagSubscription$ = new Subject<{
-    id: string;
-    sid: string;
-  }>();
-
-  const tagUnsubscription$ = new Subject<{
-    id: string;
-    sid: string;
-  }>();
-
-  const tagValueChange$ = new Subject<
-    Array<{
+  const tagSubscription$ = skip(
+    new Subject<{
       id: string;
       sid: string;
-      value: any;
-    }>
-  >();
+    }>()
+  );
 
-  const tagRefDetection$ = new Subject<{
-    id: string;
-    ref: string;
-  }>();
+  const tagUnsubscription$ = skip(
+    new Subject<{
+      id: string;
+      sid: string;
+    }>()
+  );
+
+  const tagValueChange$ = skip(
+    new Subject<
+      Array<{
+        id: string;
+        sid: string;
+        value: any;
+      }>
+    >()
+  );
+
+  const tagRefDetection$ = skip(
+    new Subject<{
+      id: string;
+      ref: string;
+    }>()
+  );
 
   const requestMessages = () => {
     window.postMessage(

@@ -1,7 +1,7 @@
 import { bind } from "@react-rxjs/core";
 import React, { FC, useEffect, useRef, useState } from "react";
 import { combineLatest } from "rxjs";
-import { DebugTag } from "rxjs-traces";
+import { DebugTag, skip } from "rxjs-traces";
 import { map } from "rxjs/operators";
 import { tagValueById$ } from "../historySlice";
 import { tagDefById$ } from "../stateProxy";
@@ -13,6 +13,7 @@ const [useTag] = bind(
       info: tagDefById$(id),
       latestValues: tagValueById$(id),
     }).pipe(
+      skip,
       map(
         ({ info, latestValues }): DebugTag => ({
           id: info.id,

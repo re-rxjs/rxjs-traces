@@ -1,8 +1,9 @@
 import { ReplaySubject } from "rxjs";
+import { skip } from "rxjs-traces";
 import { switchMap } from "rxjs/operators";
 import { State } from "./state";
 
-const state$ = new ReplaySubject<State>(1);
+const state$ = skip(new ReplaySubject<State>(1));
 
 export const connectState = (state: State) => state$.next(state);
 

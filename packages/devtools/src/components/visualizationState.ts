@@ -1,5 +1,6 @@
 import { combineKeys, partitionByKey } from "@react-rxjs/utils";
 import { BehaviorSubject, combineLatest, concat, EMPTY, timer } from "rxjs";
+import { skip } from "rxjs-traces";
 import {
   catchError,
   filter,
@@ -19,7 +20,7 @@ import { tagValueById$ } from "../historySlice";
 import { mergeKeys } from "../operators/mergeKeys";
 import { tagDefById$, tagId$ } from "../stateProxy";
 
-export const filter$ = new BehaviorSubject("");
+export const filter$ = skip(new BehaviorSubject(""));
 
 export const nodes = new DataSet<Node>();
 export interface Node extends NodeOptions {
@@ -32,9 +33,11 @@ const nodeColors = {
   highlight: "#ffb347",
 };
 
-const highlightSequence$ = concat(
-  [nodeColors.highlight],
-  timer(500).pipe(mapTo(nodeColors.default))
+const highlightSequence$ = skip(
+  concat(
+    [nodeColors.highlight],
+    timer(500).pipe(skip, mapTo(nodeColors.default))
+  )
 );
 
 const getVizNodeState = (id: string, label: string) => {
@@ -58,6 +61,7 @@ const getVizNodeState = (id: string, label: string) => {
     suspense: suspenseHit$,
     highlight: highlight$,
   }).pipe(
+    skip,
     map(({ filter, suspense, highlight }) => {
       if (filter || suspense) {
         return nodeColors.filterHit;
@@ -85,6 +89,7 @@ const getVizNodeState = (id: string, label: string) => {
     opacity: opacity$,
     color: color$,
   }).pipe(
+    skip,
     map(({ opacity, color }) =>
       opacity === 0
         ? null
@@ -133,7 +138,7 @@ combineKeys(vizNodesIds$, (id) =>
     }),
     catchError((ex) => {
       console.error(ex);
-      return EMPTY;
+      return skip(EMPTY);
     })
   )
 ).subscribe();

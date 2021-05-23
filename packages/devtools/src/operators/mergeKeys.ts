@@ -1,10 +1,11 @@
 import { Observable, Subscription } from "rxjs";
+import { skip } from "rxjs-traces";
 
 export const mergeKeys = <K, T>(
   keys$: Observable<Array<K> | Set<K>>,
   getInner$: (key: K) => Observable<T>
-): Observable<T> =>
-  new Observable((observer) => {
+): Observable<T> => {
+  const result = new Observable<T>((observer) => {
     const innerSubscriptions = new Map<K, Subscription>();
 
     const subscription = keys$.subscribe(
@@ -47,3 +48,5 @@ export const mergeKeys = <K, T>(
       });
     };
   });
+  return skip(result);
+};
