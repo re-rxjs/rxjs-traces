@@ -1,10 +1,10 @@
-import { FC } from "react"
-import React from "react"
-import "./FilterBar.css"
+import { FC } from "react";
+import React from "react";
+import "./FilterBar.css";
 
 export const FilterBar: FC<{
-  filter: string
-  onFilterChange: (filter: string) => void
+  filter: string;
+  onFilterChange: (filter: string) => void;
 }> = ({ filter, onFilterChange }) => (
   <div className="filter-bar">
     <input
@@ -14,4 +14,4 @@ export const FilterBar: FC<{
       onChange={(evt) => onFilterChange(evt.target.value)}
     />
   </div>
-)
+);

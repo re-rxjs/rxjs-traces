@@ -1,5 +1,5 @@
-import { Observable, of, from, merge } from 'rxjs';
-import { marbles } from 'rxjs-marbles/jest';
+import { Observable, of, from, merge } from "rxjs";
+import { marbles } from "rxjs-marbles/jest";
 import {
   map,
   takeLast,
@@ -8,17 +8,17 @@ import {
   delay,
   mergeMap,
   ignoreElements,
-} from 'rxjs/operators';
-import { addDebugTag, patchObservable } from '../src';
-import { resetTag$, tagValue$ } from '../src/changes';
-import { restoreObservable } from '../src/patchObservable';
-import { eachValueFrom } from 'rxjs-for-await';
+} from "rxjs/operators";
+import { addDebugTag, patchObservable } from "../src";
+import { resetTag$, tagValue$ } from "../src/changes";
+import { restoreObservable } from "../src/patchObservable";
+import { eachValueFrom } from "rxjs-for-await";
 
 afterEach(() => {
   resetTag$();
 });
 
-describe('addDebugTag', () => {
+describe("addDebugTag", () => {
   beforeAll(() => {
     patchObservable(Observable);
   });
@@ -27,13 +27,13 @@ describe('addDebugTag', () => {
   });
 
   it("sets the initial value when it's synchronous", async () => {
-    const stream = of(1).pipe(addDebugTag('result'));
+    const stream = of(1).pipe(addDebugTag("result"));
 
     const tags = await stream
       .pipe(
         takeLast(1),
         withLatestFrom(tagValue$),
-        map(([_, tags]) => tags)
+        map(([, tags]) => tags)
       )
       .toPromise();
 
@@ -42,10 +42,10 @@ describe('addDebugTag', () => {
     expect(values[0]).toEqual(1);
   });
 
-  it('keeps track of the latest value', async () => {
+  it("keeps track of the latest value", async () => {
     const stream = from([1, 2, 3]).pipe(
       concatMap((v) => of(v).pipe(delay(10))),
-      addDebugTag('result')
+      addDebugTag("result")
     );
 
     expect.assertions(3 * 2);
@@ -56,10 +56,10 @@ describe('addDebugTag', () => {
     });
   });
 
-  it('keeps the latest value for each subscription', async () => {
+  it("keeps the latest value for each subscription", async () => {
     const stream = from([1, 2]).pipe(
       concatMap((v) => of(v).pipe(delay(10))),
-      addDebugTag('result')
+      addDebugTag("result")
     );
 
     const subscriptionStream = from([1, 2]).pipe(
@@ -104,16 +104,16 @@ describe('addDebugTag', () => {
   });
 });
 
-describe('without patching', () => {
+describe("without patching", () => {
   it(
     `doesn't polute the stream when using addDebugTag`,
     marbles((m) => {
-      const source = m.cold<string>('a-b-c-|');
-      const expected = '             0-1-2-|';
+      const source = m.cold<string>("a-b-c-|");
+      const expected = "             0-1-2-|";
 
       const stream = source.pipe(
-        addDebugTag('debug'),
-        map((char) => String(char.charCodeAt(0) - 'a'.charCodeAt(0)))
+        addDebugTag("debug"),
+        map((char) => String(char.charCodeAt(0) - "a".charCodeAt(0)))
       );
 
       m.expect(stream).toBeObservable(expected);

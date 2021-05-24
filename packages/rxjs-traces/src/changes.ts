@@ -1,39 +1,45 @@
-import { merge, Observable, ReplaySubject, Subject } from 'rxjs';
-import {
-  distinctUntilChanged,
-  map,
-  publish,
-  scan,
-  startWith,
-} from 'rxjs/operators';
+import { mergeWithKey } from "@react-rxjs/utils";
+import { Observable, ReplaySubject, Subject } from "rxjs";
+import { distinctUntilChanged, scan, share, startWith } from "rxjs/operators";
+import { skip } from "./skip";
 
-export const newTag$ = new ReplaySubject<{
-  id: string;
-  label: string;
-}>();
+export const newTag$ = skip(
+  new ReplaySubject<{
+    id: string;
+    label: string;
+  }>()
+);
 
-export const tagSubscription$ = new Subject<{
-  id: string;
-  sid: string;
-}>();
+export const tagSubscription$ = skip(
+  new Subject<{
+    id: string;
+    sid: string;
+  }>()
+);
 
-export const tagUnsubscription$ = new Subject<{
-  id: string;
-  sid: string;
-}>();
+export const tagUnsubscription$ = skip(
+  new Subject<{
+    id: string;
+    sid: string;
+  }>()
+);
 
-export const tagValueChange$ = new Subject<{
-  id: string;
-  sid: string;
-  value: any;
-}>();
+export const tagValueChange$ = skip(
+  new Subject<{
+    id: string;
+    sid: string;
+    value: any;
+  }>()
+);
 
-export const tagRefDetection$ = new Subject<{
-  id: string;
-  ref: string;
-}>();
+export const tagRefDetection$ = skip(
+  new Subject<{
+    id: string;
+    ref: string;
+  }>()
+);
 
-const tagReset$ = new Subject<void>();
+const tagReset$ = skip(new Subject<void>());
 
 export interface DebugTag {
   id: string;
@@ -42,100 +48,88 @@ export interface DebugTag {
   latestValues: Record<string, any>;
 }
 
-const mergeReducer = <T>(
-  initialValue: T,
-  reducer: (state: T, action: { index: number; value: any }) => T,
-  ...observables: Observable<any>[]
-) =>
-  merge(
-    ...observables.map((obs, index) =>
-      obs.pipe(map((value) => ({ index, value })))
-    )
-  ).pipe(
-    scan(reducer, initialValue),
-    startWith(initialValue),
-    distinctUntilChanged()
-  );
-
-export const tagValue$: Observable<Record<string, DebugTag>> = mergeReducer<
-  Record<string, DebugTag>
->(
-  {},
-  (state, { index, value }): Record<string, DebugTag> => {
-    switch (index) {
-      case 0: // reset
+export const tagValue$: Observable<Record<string, DebugTag>> = skip(
+  mergeWithKey({
+    tagReset$,
+    newTag$,
+    tagSubscription$,
+    tagUnsubscription$,
+    tagValueChange$,
+    tagRefDetection$,
+  })
+).pipe(
+  scan((state, action) => {
+    switch (action.type) {
+      case "tagReset$":
         return {};
-      case 1: // newTag
-        if (state[value.id]) {
+      case "newTag$":
+        if (state[action.payload.id]) {
           return state;
         }
         return {
           ...state,
-          [value.id]: {
-            ...value,
+          [action.payload.id]: {
+            ...action.payload,
             refs: [],
             latestValues: {},
           },
         };
-      case 2: // tagSubscription
+      case "tagSubscription$":
         return {
           ...state,
-          [value.id]: {
-            ...state[value.id],
+          [action.payload.id]: {
+            ...state[action.payload.id],
             latestValues: {
-              ...state[value.id].latestValues,
-              [value.sid]: undefined,
+              ...state[action.payload.id].latestValues,
+              [action.payload.sid]: undefined,
             },
           },
         };
-      case 3: // tagUnsubscription
-        const { [value.sid]: _, ...latestValues } = state[
-          value.id
-        ].latestValues;
+      case "tagUnsubscription$":
+        const { [action.payload.sid]: _, ...latestValues } =
+          state[action.payload.id].latestValues;
         return {
           ...state,
-          [value.id]: {
-            ...state[value.id],
+          [action.payload.id]: {
+            ...state[action.payload.id],
             latestValues,
           },
         };
-      case 4: // tagValueChanged
+      case "tagValueChange$":
         const values = {
-          ...state[value.id].latestValues,
+          ...state[action.payload.id].latestValues,
         };
-        if (values[value.sid] === value.value) {
+        if (values[action.payload.sid] === action.payload.value) {
           return state;
         }
-        values[value.sid] = value.value;
+        values[action.payload.sid] = action.payload.value;
         return {
           ...state,
-          [value.id]: {
-            ...state[value.id],
+          [action.payload.id]: {
+            ...state[action.payload.id],
             latestValues: values,
           },
         };
-      case 5: // tagRefDetection
-        if (state[value.id].refs.includes(value.ref)) {
+      case "tagRefDetection$":
+        if (state[action.payload.id].refs.includes(action.payload.ref)) {
           return state;
         }
         return {
           ...state,
-          [value.id]: {
-            ...state[value.id],
-            refs: [...state[value.id].refs, value.ref],
+          [action.payload.id]: {
+            ...state[action.payload.id],
+            refs: [...state[action.payload.id].refs, action.payload.ref],
           },
         };
     }
     return state;
-  },
-  tagReset$,
-  newTag$,
-  tagSubscription$,
-  tagUnsubscription$,
-  tagValueChange$,
-  tagRefDetection$
-).pipe(publish());
-(tagValue$ as any).connect();
+  }, {} as Record<string, DebugTag>),
+  startWith({}),
+  distinctUntilChanged(),
+  share()
+);
+
+tagValue$.subscribe();
 
 // Internal (just to reset tests);
 export const resetTag$ = () => tagReset$.next();

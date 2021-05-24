@@ -3,7 +3,8 @@
   "name": "rxjs-traces-playground",
   "version": "0.1.0-alpha.1",
   "dependencies": {
-    "@react-rxjs/core": "0.2.0",
+    "@react-rxjs/core": "^0.8.0",
+    "@react-rxjs/utils": "^0.8.2",
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
@@ -15,9 +16,7 @@
     "react-dom": "^16.13.1",
     "react-error-boundary": "^2.3.1",
     "react-scripts": "3.4.1",
-    "rxjs": "^6.6.0",
-    "rxjs-traces": "^0.1.0-alpha.1",
-    "typescript": "~3.7.2"
+    "rxjs": "^7.0.1"
   },
   "scripts": {
     "start": "react-scripts start",

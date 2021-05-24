@@ -1,50 +1,19 @@
-import { isObservable, merge } from 'rxjs';
-import { map, share } from 'rxjs/operators';
+import { mergeWithKey } from "@react-rxjs/utils";
+import { isObservable, Observable } from "rxjs";
+import { bufferWhen, connect, switchMapTo, take } from "rxjs/operators";
 import {
   newTag$,
   tagRefDetection$,
   tagSubscription$,
   tagUnsubscription$,
   tagValueChange$,
-} from './changes';
-
-const eventHistory$ = merge(
-  newTag$.pipe(
-    map((payload) => ({
-      type: 'new-tag',
-      payload,
-    }))
-  ),
-  tagSubscription$.pipe(
-    map((payload) => ({
-      type: 'tag-subscription',
-      payload,
-    }))
-  ),
-  tagUnsubscription$.pipe(
-    map((payload) => ({
-      type: 'tag-unsubscription',
-      payload,
-    }))
-  ),
-  tagValueChange$.pipe(
-    map((payload) => ({
-      type: 'tag-value-change',
-      payload,
-    }))
-  ),
-  tagRefDetection$.pipe(
-    map((payload) => ({
-      type: 'tag-ref-detection',
-      payload,
-    }))
-  )
-).pipe(share());
+} from "./changes";
+import { skip } from "./skip";
 
 // For subscribers that are late (i.e. devtools take some time to initialize) we must keep old events.
 const pastHistory: any[] = [];
 
-window.addEventListener('message', (event: MessageEvent) => {
+window.addEventListener("message", (event: MessageEvent) => {
   const { data, origin } = event;
 
   if (origin !== window.location.origin) {
@@ -52,14 +21,14 @@ window.addEventListener('message', (event: MessageEvent) => {
   }
 
   if (
-    typeof data === 'object' &&
-    data.source === 'rxjs-traces-devtools' &&
-    data.type === 'receive'
+    typeof data === "object" &&
+    data.source === "rxjs-traces-devtools" &&
+    data.type === "receive"
   ) {
     window.postMessage(
       {
-        source: 'rxjs-traces',
-        type: 'event-history',
+        source: "rxjs-traces",
+        type: "event-history",
         payload: prepareForTransmit(pastHistory),
       },
       window.location.origin
@@ -85,36 +54,51 @@ const WeakRefCtor: typeof WeakRef =
   };
 
 export function initDevtools() {
-  eventHistory$.subscribe(({ type, payload }) => {
-    const value = (payload as any).value;
-    if (
-      type === 'tag-value-change' &&
-      typeof value === 'object' &&
-      value !== null
-    ) {
+  skip(
+    mergeWithKey({
+      newTag$,
+      tagSubscription$,
+      tagUnsubscription$,
+      tagValueChange$: tagValueChange$.pipe(
+        connect((shared) =>
+          skip(shared).pipe(
+            bufferWhen(() =>
+              skip(shared).pipe(take(1), switchMapTo(skip(microTask$)))
+            )
+          )
+        )
+      ),
+      tagRefDetection$,
+    })
+  ).subscribe((res) => {
+    if (res.type === "tagValueChange$") {
       pastHistory.push({
-        type,
-        payload: {
-          payload,
-          value: new WeakRefCtor(value),
-        },
+        type: res.type,
+        payload: res.payload.map((v) => ({
+          ...v,
+          value:
+            typeof v.value === "object" && v.value !== null
+              ? // Wrap the payload into a WeakRef so that it can get garbage collected.
+                new WeakRefCtor(v.value)
+              : v.value,
+        })),
       });
     } else {
-      pastHistory.push({ type, payload });
+      pastHistory.push(res);
     }
 
     try {
       window.postMessage(
         {
-          source: 'rxjs-traces',
-          type,
-          payload: prepareForTransmit(payload),
+          source: "rxjs-traces",
+          type: res.type,
+          payload: prepareForTransmit(res.payload),
         },
         window.location.origin
       );
     } catch (ex) {
-      if (ex.name === 'DataCloneError') {
-        console.warn(`Can't transmit object to devtools`, payload, ex);
+      if (ex.name === "DataCloneError") {
+        console.warn(`Can't transmit object to devtools`, res.payload, ex);
       } else {
         throw ex;
       }
@@ -123,8 +107,8 @@ export function initDevtools() {
 
   window.postMessage(
     {
-      source: 'rxjs-traces-bridge',
-      type: 'connected',
+      source: "rxjs-traces-bridge",
+      type: "connected",
     },
     window.location.origin
   );
@@ -143,21 +127,21 @@ function prepareForTransmit<T>(
   if (value instanceof WeakRefCtor) {
     const ref = value.deref();
     if (ref === undefined) {
-      return 'Symbol(GCed Object)';
+      return "Symbol(GCed Object)";
     }
     return prepareForTransmit(ref, visitedValues);
   }
   switch (typeof value) {
-    case 'symbol':
+    case "symbol":
       return String(value);
-    case 'undefined':
-      return 'Symbol(undefined)';
-    case 'object':
+    case "undefined":
+      return "Symbol(undefined)";
+    case "object":
       if (value === null) {
         return value;
       }
       if (isObservable(value)) {
-        return 'Symbol(Observable)';
+        return "Symbol(Observable)";
       }
 
       if (value instanceof Map) {
@@ -189,9 +173,24 @@ function prepareForTransmit<T>(
           (result[key] = prepareForTransmit((value as any)[key], visitedValues))
       );
       return result;
-    case 'function':
+    case "function":
       return `Symbol(function ${value.name})`;
+    case "bigint":
+      return value.toString() + "n";
     default:
       return value;
   }
 }
+
+const microTask$ = new Observable<void>((obs) => {
+  const run = () => {
+    if (obs.closed) return;
+    obs.next();
+    obs.complete();
+  };
+  if ("queueMicrotask" in globalThis) {
+    queueMicrotask(run);
+  } else {
+    Promise.resolve().then(run);
+  }
+});

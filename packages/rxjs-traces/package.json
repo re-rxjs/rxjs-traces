@@ -1,8 +1,8 @@
 {
-  "version": "0.1.0-alpha.12",
+  "version": "0.2.0-alpha.1",
   "license": "MIT",
-  "main": "dist/index.js",
   "typings": "dist/index.d.ts",
+  "module": "dist/rxjs-traces.esm.js",
   "files": [
     "dist",
     "src"
@@ -11,36 +11,24 @@
     "node": ">=10"
   },
   "scripts": {
-    "start": "tsdx watch",
-    "build": "tsdx build",
-    "test": "tsdx test",
-    "lint": "tsdx lint src test",
-    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md}\" \"test/**/*.{js,jsx,ts,tsx,json,md}\"",
-    "prepare": "tsdx build"
+    "build": "node ../../buildPackage.mjs rxjs-traces",
+    "test": "jest",
+    "lint": "eslint src/**/* test/**/*",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md}\" \"test/**/*.{js,jsx,ts,tsx,json,md}\""
   },
   "peerDependencies": {
-    "rxjs": "^6.6.0"
-  },
-  "prettier": {
-    "printWidth": 80,
-    "semi": true,
-    "singleQuote": true,
-    "trailingComma": "es5"
+    "rxjs": "^7.0.1"
   },
   "name": "rxjs-traces",
   "author": "Víctor Oliva",
-  "module": "dist/rxjs-traces.esm.js",
   "devDependencies": {
-    "@react-rxjs/core": "0.2.0",
+    "@react-rxjs/core": "^0.8.0",
     "@types/uuid": "^8.0.0",
-    "rxjs": "^6.6.0",
     "rxjs-for-await": "^0.0.2",
-    "rxjs-marbles": "^6.0.1",
-    "tsdx": "^0.13.2",
-    "tslib": "^2.0.0",
-    "typescript": "^3.9.7"
+    "rxjs-marbles": "^6.0.1"
   },
   "dependencies": {
+    "@react-rxjs/utils": "^0.8.2",
     "uuid": "^8.2.0"
   }
 }

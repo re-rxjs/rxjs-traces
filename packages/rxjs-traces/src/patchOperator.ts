@@ -1,5 +1,5 @@
-import { Observable } from 'rxjs';
-import { getMetadata, findReverseTagRefs, detectRefChanges } from './metadata';
+import { Observable } from "rxjs";
+import { getMetadata } from "./metadata";
 
 export const patchOperator = <
   T extends (...args: any[]) => (source: Observable<any>) => Observable<any>
@@ -19,7 +19,7 @@ export const patchOperator = <
     return (source: Observable<unknown>) => {
       // Map arguments to mock out functions and find out if they're projections
       const mappedArgs = args.map((arg) => {
-        if (typeof arg !== 'function') {
+        if (typeof arg !== "function") {
           return arg;
         }
         return (...argFnArgs: any[]) => {
@@ -30,12 +30,7 @@ export const patchOperator = <
           }
 
           // It's a projection, we can link refs
-          const dependantTagRefs = findReverseTagRefs(source);
-          detectRefChanges(() => {
-            const resultMetadata = getMetadata(result);
-            resultMetadata.refs.add(argFnResult);
-            getMetadata(argFnResult).reverseRefs.add(result);
-          }, dependantTagRefs);
+          getMetadata(result).addDependency(argFnResult);
           return argFnResult;
         };
       });
@@ -43,15 +38,11 @@ export const patchOperator = <
       const applied = operator(...mappedArgs);
       const result = applied(source);
       const resultMetadata = getMetadata(result);
-      const sourceMetadata = getMetadata(source);
 
-      resultMetadata.refs.add(source);
-      sourceMetadata.reverseRefs.add(result);
+      resultMetadata.addDependency(source);
 
       streamArgs.forEach((arg) => {
-        const argMetadata = getMetadata(arg);
-        resultMetadata.refs.add(arg);
-        argMetadata.reverseRefs.add(result);
+        resultMetadata.addDependency(arg);
       });
       return result;
     };
