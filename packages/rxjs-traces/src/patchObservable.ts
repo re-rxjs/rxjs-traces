@@ -10,12 +10,7 @@ import {
 } from "rxjs";
 import { takeUntil, toArray } from "rxjs/operators";
 import { getMetadata } from "./metadata";
-
-const Patched = Symbol("patched");
-export const isPatched = (fn: object) => Boolean(fn && (fn as any)[Patched]);
-export const markAsPatched = (fn: object, patched = true) => {
-  (fn as any)[Patched] = patched;
-};
+import { isPatched, markAsPatched } from "./patched";
 
 const originalSubscribe = Observable.prototype.subscribe as <T>(
   observer: Observer<T>

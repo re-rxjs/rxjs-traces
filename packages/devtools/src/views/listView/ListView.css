@@ -1,0 +1,74 @@
+button.graphAll {
+  align-self: center;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+button.graphAll img {
+  margin-right: 0.5rem;
+}
+
+.listView,
+.listView ul {
+  /* reset ul styles */
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.listView {
+  height: 100%;
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 0.5rem 0;
+}
+
+.listView .TagLabel {
+  max-width: 400px;
+  margin: auto;
+  border: thin solid gray;
+}
+.listView .TagLabel:not(:first-child) {
+  border-top: none;
+}
+
+.listView .TagLabel_title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: azure;
+  cursor: pointer;
+  transition: background-color 0.5s;
+
+  /* reset button styles */
+  border-style: none;
+  width: 100%;
+  text-align: left;
+}
+
+.listView .TagLabel_title--highlight {
+  background-color: #97c2fc;
+  transition: none;
+}
+
+.listView .TagLabel_title .badge {
+  background-color: lightgray;
+  padding: 0.2rem 0.3rem;
+  border-radius: 100vh;
+}
+
+.listView .TagDetail {
+  padding: 0.5rem;
+}
+
+.listView .TagDetail_value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.listView .TagDetail_value textarea {
+  flex: 1 1 auto;
+}

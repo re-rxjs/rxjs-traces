@@ -1,11 +1,10 @@
 import { bind, Subscribe } from "@react-rxjs/core";
 import React from "react";
 import { ErrorBoundary, FallbackProps } from "react-error-boundary";
-import { EMPTY, interval, merge, timer } from "rxjs";
+import { interval } from "rxjs";
 import { addDebugTag } from "rxjs-traces";
-import { DevTools } from "rxjs-traces-devtools";
 import "rxjs-traces-devtools/dist/bundle.css";
-import { scan, share, switchMap, withLatestFrom } from "rxjs/operators";
+import { scan, share } from "rxjs/operators";
 import "./App.css";
 
 const seconds = interval(1000).pipe(addDebugTag("seconds"), share());

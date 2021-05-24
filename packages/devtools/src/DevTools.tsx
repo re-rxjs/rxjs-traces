@@ -1,40 +1,24 @@
 import * as React from "react";
-import { useState } from "react";
-import {
-  FilterBar,
-  TagOverlay,
-  TimeTravelSlider,
-  Visualization,
-} from "./components";
+import { FilterBar, TimeTravelSlider } from "./components";
+import { CopyContext } from "./copy";
+import { GraphView, ListView } from "./views";
 
-interface TagSelection {
-  id: string;
-  x: number;
-  y: number;
-}
+const defaultCopy = (value: string) => navigator.clipboard.writeText(value);
+
 export const DevTools: React.FC<{
   onCopy?: (value: string) => void;
-}> = ({ onCopy = () => void 0 }) => {
-  const [selectedTag, setSelectedTag] = useState<TagSelection | null>(null);
-  const [filter, setFilter] = useState("");
+}> = ({ onCopy = defaultCopy }) => {
+  const [view, setView] = React.useState<"list" | "graph">("list");
 
   return (
-    <>
-      <FilterBar filter={filter} onFilterChange={setFilter} />
-      <Visualization
-        filter={filter}
-        onSelectNode={(id, x, y) => setSelectedTag({ id, x, y })}
-        onDeselectNode={() => setSelectedTag(null)}
-      />
-      {selectedTag && (
-        <TagOverlay
-          id={selectedTag.id}
-          initialX={selectedTag.x}
-          initialY={selectedTag.y}
-          onCopy={onCopy}
-        />
+    <CopyContext.Provider value={onCopy}>
+      <FilterBar />
+      {view === "list" ? (
+        <ListView onSwitchView={() => setView("graph")} />
+      ) : (
+        <GraphView onSwitchView={() => setView("list")} />
       )}
       <TimeTravelSlider />
-    </>
+    </CopyContext.Provider>
   );
 };

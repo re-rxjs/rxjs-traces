@@ -14,21 +14,21 @@ between them.
 ## Usage
 
 ```ts
-import { Observable, interval } from "rxjs"
-import { scan } from "rxjs/operators"
-import { patchObservable, addDebugTag } from "rxjs-traces"
+import { Observable, interval } from "rxjs";
+import { scan } from "rxjs/operators";
+import { patchObservable, addDebugTag } from "rxjs-traces";
 
 // Hook into Observable
-patchObservable(Observable)
+patchObservable(Observable);
 
-const seconds = interval(1000).pipe(addDebugTag("seconds"))
+const seconds = interval(1000).pipe(addDebugTag("seconds"));
 
 const value = seconds.pipe(
   scan((total, s) => total + s),
-  addDebugTag("value"),
-)
+  addDebugTag("value")
+);
 
-value.subscribe() // Use them as needed
+value.subscribe(); // Use them as needed
 ```
 
 ### Visualiser
@@ -37,12 +37,12 @@ Either compile + install the DevTools in chrome, or use them as standalone
 with:
 
 ```tsx
-import ReactDOM from "react-dom"
-import { DevTools, connectStandalone } from "rxjs-traces-devtools"
+import ReactDOM from "react-dom";
+import { DevTools, connectStandalone } from "rxjs-traces-devtools";
 
-connectStandalone()
+connectStandalone();
 
-ReactDOM.render(<DevTools />, htmlElement)
+ReactDOM.render(<DevTools />, htmlElement);
 ```
 
 Note: It doesn't need to run in a separate ReactDOM tree if you already use
@@ -87,5 +87,5 @@ This package uses yarn workspaces. The inner packages are:
 
 ## Disclaimer
 
-This heavily relies on the internals of rxjs v6 - It's an experimental tool
+This heavily relies on the internals of rxjs v7 - It's an experimental tool
 that might not work with some versions of rxjs, even for non-major updates. Use at your own risk.

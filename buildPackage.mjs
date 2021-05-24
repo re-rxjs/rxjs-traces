@@ -2,6 +2,7 @@ import commonjs from "@rollup/plugin-commonjs";
 import typescript from "@rollup/plugin-typescript";
 import cssOnly from "rollup-plugin-css-only";
 import { babel } from "@rollup/plugin-babel";
+import image from "@rollup/plugin-image";
 import { terser } from "rollup-plugin-terser";
 import { rollup } from "rollup";
 import fs from "fs";
@@ -37,6 +38,7 @@ const makeConfig = ({ format, minify, types, css }) =>
       },
       plugins: [
         // all bundled external modules need to be converted from CJS to ESM
+        image(),
         commonjs(),
         typescript({
           emitDeclarationOnly: types,
