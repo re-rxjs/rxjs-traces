@@ -1,14 +1,13 @@
 import React, { FC, useEffect, useRef } from "react";
 import { Network } from "vis-network/standalone";
 import "./Visualization.css";
-import { edges, nodes, filter$ } from "./visualizationState";
+import { edges, nodes } from "./visualizationState";
 
 const noop = () => void 0;
 export const Visualization: FC<{
-  filter: string;
   onSelectNode?: (id: string, x: number, y: number) => void;
   onDeselectNode?: (id: string) => void;
-}> = ({ filter, onSelectNode = noop, onDeselectNode = noop }) => {
+}> = ({ onSelectNode = noop, onDeselectNode = noop }) => {
   const container = useRef<HTMLDivElement | null>(null);
   const network = useRef<Network | null>(null);
 
@@ -45,10 +44,6 @@ export const Visualization: FC<{
       network.current!.off("deselectNode", handleDeselectEvent);
     };
   }, [onSelectNode, onDeselectNode]);
-
-  useEffect(() => {
-    filter$.next(filter);
-  }, [filter]);
 
   return <div ref={container} className="visualization"></div>;
 };

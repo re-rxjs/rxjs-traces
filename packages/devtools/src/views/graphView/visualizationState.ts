@@ -1,5 +1,5 @@
 import { combineKeys, partitionByKey } from "@react-rxjs/utils";
-import { BehaviorSubject, combineLatest, concat, EMPTY, timer } from "rxjs";
+import { combineLatest, concat, EMPTY, timer } from "rxjs";
 import { skip } from "rxjs-traces";
 import {
   catchError,
@@ -16,11 +16,10 @@ import {
   tap,
 } from "rxjs/operators";
 import { DataSet, EdgeOptions, NodeOptions } from "vis-network/standalone";
-import { tagValueById$ } from "../historySlice";
-import { mergeKeys } from "../operators/mergeKeys";
-import { tagDefById$, tagId$ } from "../stateProxy";
-
-export const filter$ = skip(new BehaviorSubject(""));
+import { tagValueById$ } from "../../historySlice";
+import { mergeKeys } from "../../operators/mergeKeys";
+import { tagDefById$, tagId$ } from "../../stateProxy";
+import { filter$ } from "../../components/FilterBar";
 
 export const nodes = new DataSet<Node>();
 export interface Node extends NodeOptions {

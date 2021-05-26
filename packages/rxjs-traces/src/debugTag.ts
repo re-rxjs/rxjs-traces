@@ -9,7 +9,7 @@ import {
   tagValueChange$,
 } from "./changes";
 import { getMetadata } from "./metadata";
-import { isPatched } from "./patchObservable";
+import { isPatched } from "./patched";
 
 let warningShown = false;
 export const addDebugTag =

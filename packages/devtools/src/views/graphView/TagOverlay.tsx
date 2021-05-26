@@ -1,10 +1,12 @@
 import { bind } from "@react-rxjs/core";
-import React, { FC, useEffect, useRef, useState } from "react";
+import React, { FC, useEffect, useRef, useState, useContext } from "react";
 import { combineLatest } from "rxjs";
 import { DebugTag, skip } from "rxjs-traces";
 import { map } from "rxjs/operators";
-import { tagValueById$ } from "../historySlice";
-import { tagDefById$ } from "../stateProxy";
+import { CopyContext } from "../../copy";
+import { tagValueById$ } from "../../historySlice";
+import { serializeJSON } from "../../jsonSerializer";
+import { tagDefById$ } from "../../stateProxy";
 import "./TagOverlay.css";
 
 const [useTag] = bind(
@@ -30,8 +32,8 @@ export const TagOverlay: FC<{
   id: string;
   initialX: number;
   initialY: number;
-  onCopy?: (value: string) => void;
-}> = ({ id, initialX, initialY, onCopy }) => {
+}> = ({ id, initialX, initialY }) => {
+  const onCopy = useContext(CopyContext);
   const tag = useTag(id);
   const [ref, setRef] = useState<HTMLDivElement | null>(null);
   const drag = useDrag(ref, initialX + 15, initialY);
@@ -132,27 +134,7 @@ const ValueInspector: FC<{
     expanded && expandible ? renderExpanded() : renderInline();
 
   const showCopy = typeof value === "object" && expandible;
-  const copyValue = () => {
-    const stringified = new WeakSet<object>();
-    onCopy(
-      JSON.stringify(
-        value,
-        (_, value) => {
-          if (value === undefined) {
-            return "Symbol(undefined)";
-          }
-          if (typeof value === "object" && value !== null) {
-            if (stringified.has(value)) {
-              return "Symbol(Circular reference)";
-            }
-            stringified.add(value);
-          }
-          return value;
-        },
-        2
-      )
-    );
-  };
+  const copyValue = () => onCopy(serializeJSON(value));
 
   return (
     <div className="value-inspector">
