@@ -1,61 +1,68 @@
-import { EMPTY, Observable, of, Subject } from "rxjs"
-import {
-  Action,
-  action$,
-  reset$,
-  TagState,
-  tagState$,
-} from "rxjs-traces-devtools"
-import { filter, map, mapTo, mergeMap, share, startWith } from "rxjs/operators"
-import { deserialize } from "./deserialize"
+import { partitionByKey } from "@react-rxjs/utils";
+import { Observable, Subject } from "rxjs";
+import { TagDef, TagState, connectState } from "rxjs-traces-devtools";
+import { filter, map, mergeMap, share, takeWhile } from "rxjs/operators";
+import { deserialize } from "./deserialize";
 
-export const copy$ = new Subject<string>()
+export const copy$ = new Subject<string>();
 
 const backgroundScriptConnection$ = new Observable<{
-  action?: Action
-  actionHistory?: Action[]
-  tags?: TagState
+  tagId$?: string[];
+  tagDef$?: Record<string, TagDef>;
+  tagValueHistory$?: Record<string, TagState[]>;
 }>((obs) => {
-  var backgroundPageConnection = chrome.runtime.connect({
+  const backgroundPageConnection = chrome.runtime.connect({
     name: "devtools-page_" + chrome.devtools.inspectedWindow.tabId,
-  })
+  });
 
   backgroundPageConnection.onMessage.addListener((message) => {
-    obs.next(deserialize(message))
-  })
+    obs.next(deserialize(message));
+  });
 
   const copySubscription = copy$.subscribe((payload) => {
     backgroundPageConnection.postMessage({
       type: "copy",
       payload,
-    })
-  })
+    });
+  });
 
   return () => {
-    backgroundPageConnection.disconnect()
-    copySubscription.unsubscribe()
-  }
-}).pipe(share())
+    backgroundPageConnection.disconnect();
+    copySubscription.unsubscribe();
+  };
+}).pipe(share());
 
-backgroundScriptConnection$
-  .pipe(
-    filter((v) => Boolean(v.actionHistory)),
-    mapTo(void 0),
-  )
-  .subscribe(reset$)
+const unwrapPartitionedStream = <R>(stream: Observable<Record<string, R>>) =>
+  partitionByKey(
+    stream.pipe(mergeMap((value) => Object.entries(value))),
+    ([key]) => key,
+    (stream$) =>
+      stream$.pipe(
+        map(([, value]) => value),
+        takeWhile((value) => value !== undefined)
+      )
+  );
 
-backgroundScriptConnection$
-  .pipe(
-    mergeMap((v) =>
-      v.actionHistory ? v.actionHistory : v.action ? of(v.action) : EMPTY,
-    ),
+const [tagDefById$, tagDefKeys$] = unwrapPartitionedStream(
+  backgroundScriptConnection$.pipe(
+    filter((v) => Boolean(v.tagDef$)),
+    map((v) => v.tagDef$!)
   )
-  .subscribe(action$)
+);
+tagDefKeys$.subscribe();
+const [tagValueHistoryById$, tagValueHistoryKeys$] = unwrapPartitionedStream(
+  backgroundScriptConnection$.pipe(
+    filter((v) => Boolean(v.tagValueHistory$)),
+    map((v) => v.tagValueHistory$!)
+  )
+);
+tagValueHistoryKeys$.subscribe();
 
-backgroundScriptConnection$
-  .pipe(
-    filter((v) => Boolean(v.tags)),
-    map((v) => v.tags!),
-    startWith({} as TagState),
-  )
-  .subscribe(tagState$)
+connectState({
+  tagId$: backgroundScriptConnection$.pipe(
+    filter((v) => Boolean(v.tagId$)),
+    map((v) => v.tagId$!)
+  ),
+  tagDefById$,
+  tagValueHistoryById$,
+});
