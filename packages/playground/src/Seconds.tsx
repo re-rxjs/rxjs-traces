@@ -3,7 +3,6 @@ import React from "react";
 import { ErrorBoundary, FallbackProps } from "react-error-boundary";
 import { interval } from "rxjs";
 import { addDebugTag } from "rxjs-traces";
-import "rxjs-traces-devtools/dist/bundle.css";
 import { scan, share } from "rxjs/operators";
 import "./App.css";
 
@@ -20,16 +19,11 @@ const RandomComponent = () => {
   return <div>{value}</div>;
 };
 
-function ErrorFallback({
-  error,
-  componentStack,
-  resetErrorBoundary,
-}: FallbackProps) {
+function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   return (
     <div role="alert">
       <p>Something went wrong:</p>
       <pre>{error?.message}</pre>
-      <pre>{componentStack}</pre>
       <button onClick={resetErrorBoundary}>Try again</button>
     </div>
   );

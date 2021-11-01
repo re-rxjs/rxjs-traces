@@ -176,7 +176,7 @@ const useDrag = (
     ref.style.visibility = "visible";
     ref.style.left = left + "px";
     ref.style.top = top + "px";
-  }, [ref]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ref]);
 
   useEffect(() => {
     return () => {

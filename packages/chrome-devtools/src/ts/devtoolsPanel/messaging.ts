@@ -1,61 +1,62 @@
-import { EMPTY, Observable, of, Subject } from "rxjs"
-import {
-  Action,
-  action$,
-  reset$,
-  TagState,
-  tagState$,
-} from "rxjs-traces-devtools"
-import { filter, map, mapTo, mergeMap, share, startWith } from "rxjs/operators"
-import { deserialize } from "./deserialize"
+import { partitionByKey } from "@react-rxjs/utils";
+import { Observable, ReplaySubject, Subject } from "rxjs";
+import { TagDef, TagState, connectState } from "rxjs-traces-devtools";
+import { map, mergeMap, takeWhile } from "rxjs/operators";
+import { deserialize } from "./deserialize";
 
-export const copy$ = new Subject<string>()
+export const copy$ = new Subject<string>();
 
-const backgroundScriptConnection$ = new Observable<{
-  action?: Action
-  actionHistory?: Action[]
-  tags?: TagState
-}>((obs) => {
-  var backgroundPageConnection = chrome.runtime.connect({
-    name: "devtools-page_" + chrome.devtools.inspectedWindow.tabId,
-  })
+const unwrapPartitionedStream = <R>(stream: Observable<Record<string, R>>) =>
+  partitionByKey(
+    stream.pipe(mergeMap((value) => Object.entries(value))),
+    ([key]) => key,
+    (stream$) =>
+      stream$.pipe(
+        map(([, value]) => value),
+        takeWhile((value) => value !== undefined)
+      )
+  );
 
-  backgroundPageConnection.onMessage.addListener((message) => {
-    obs.next(deserialize(message))
-  })
+const tagIdSubject = new ReplaySubject<string[]>(1);
+const tagDefSubject = new Subject<Record<string, TagDef>>();
+const tagValueHistorySubject = new Subject<Record<string, TagState[]>>();
 
-  const copySubscription = copy$.subscribe((payload) => {
-    backgroundPageConnection.postMessage({
-      type: "copy",
-      payload,
-    })
-  })
+const backgroundPageConnection = chrome.runtime.connect({
+  name: "devtools-page_" + chrome.devtools.inspectedWindow.tabId,
+});
 
-  return () => {
-    backgroundPageConnection.disconnect()
-    copySubscription.unsubscribe()
-  }
-}).pipe(share())
+backgroundPageConnection.onMessage.addListener((message) => {
+  const [type, payload] = Object.entries(deserialize(message))[0];
+  const target =
+    type === "tagId$"
+      ? tagIdSubject
+      : type === "tagDef$"
+      ? tagDefSubject
+      : tagValueHistorySubject;
+  target.next(payload as any);
+});
 
-backgroundScriptConnection$
-  .pipe(
-    filter((v) => Boolean(v.actionHistory)),
-    mapTo(void 0),
-  )
-  .subscribe(reset$)
+copy$.subscribe((payload) => {
+  backgroundPageConnection.postMessage({
+    type: "copy",
+    payload,
+  });
+});
 
-backgroundScriptConnection$
-  .pipe(
-    mergeMap((v) =>
-      v.actionHistory ? v.actionHistory : v.action ? of(v.action) : EMPTY,
-    ),
-  )
-  .subscribe(action$)
+const [tagDefById$, tagDefKeys$] = unwrapPartitionedStream(tagDefSubject);
+const [tagValueHistoryById$, tagValueHistoryKeys$] = unwrapPartitionedStream(
+  tagValueHistorySubject
+);
 
-backgroundScriptConnection$
-  .pipe(
-    filter((v) => Boolean(v.tags)),
-    map((v) => v.tags!),
-    startWith({} as TagState),
-  )
-  .subscribe(tagState$)
+connectState({
+  tagId$: tagIdSubject,
+  tagDefById$,
+  tagValueHistoryById$,
+});
+
+tagDefKeys$.subscribe();
+tagValueHistoryKeys$.subscribe();
+
+backgroundPageConnection.postMessage({
+  type: "ready",
+});

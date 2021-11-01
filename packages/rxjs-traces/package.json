@@ -28,7 +28,7 @@
     "rxjs-marbles": "^6.0.1"
   },
   "dependencies": {
-    "@react-rxjs/utils": "^0.8.2",
+    "@react-rxjs/utils": "^0.9.3",
     "uuid": "^8.2.0"
   }
 }

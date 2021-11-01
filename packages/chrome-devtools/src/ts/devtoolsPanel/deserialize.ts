@@ -1,20 +1,20 @@
 export function deserialize(value: any, visitedValues = new WeakSet<any>()) {
   if (value === "Symbol(undefined)") {
-    return undefined
+    return undefined;
   }
   if (visitedValues.has(value) || value === null || typeof value !== "object") {
-    return value
+    return value;
   }
   if (Array.isArray(value)) {
-    visitedValues.add(value)
+    visitedValues.add(value);
     for (let i = 0; i < value.length; i++) {
-      value[i] = deserialize(value[i])
+      value[i] = deserialize(value[i]);
     }
-    return value
+    return value;
   }
   for (const key in value) {
-    visitedValues.add(value)
-    value[key] = deserialize(value[key])
+    visitedValues.add(value);
+    value[key] = deserialize(value[key]);
   }
-  return value
+  return value;
 }

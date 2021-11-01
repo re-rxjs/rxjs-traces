@@ -80,6 +80,11 @@ This package uses yarn workspaces. The inner packages are:
   `bind()`, setting the tag name to that one of the hook returned by bind.
 - playground: Example CRA application used to quickly try new features.
 
+Build environment:
+
+- Yarn 1.13.0
+- Node 14.15.4
+
 ### Commands
 
 - yarn start: Builds and watches all packages.

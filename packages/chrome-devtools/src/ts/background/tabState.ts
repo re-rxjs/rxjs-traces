@@ -1,64 +1,80 @@
-import { Subject } from "rxjs"
-import { Action, connect } from "rxjs-traces-devtools"
-import { scan, shareReplay } from "rxjs/operators"
+import { ReplaySubject, Subject } from "rxjs";
+import { createState, TagDef, TagState } from "rxjs-traces-devtools";
+import { combineKeys, MapWithChanges } from "@react-rxjs/utils";
 
 export const createTabState = () => {
-  const reset$ = new Subject<void>()
-
   const newTag$ = new Subject<{
-    id: string
-    label: string
-  }>()
+    id: string;
+    label: string;
+  }>();
 
   const tagSubscription$ = new Subject<{
-    id: string
-    sid: string
-  }>()
+    id: string;
+    sid: string;
+  }>();
 
   const tagUnsubscription$ = new Subject<{
-    id: string
-    sid: string
-  }>()
+    id: string;
+    sid: string;
+  }>();
 
-  const tagValueChange$ = new Subject<{
-    id: string
-    sid: string
-    value: any
-  }>()
+  const tagValueChange$ = new Subject<
+    Array<{
+      id: string;
+      sid: string;
+      value: any;
+    }>
+  >();
 
   const tagRefDetection$ = new Subject<{
-    id: string
-    ref: string
-  }>()
+    id: string;
+    ref: string;
+  }>();
 
-  const { tag$, action$ } = connect({
-    reset$,
-    newTag$,
-    tagSubscription$,
-    tagUnsubscription$,
-    tagValueChange$,
-    tagRefDetection$,
-  })
+  const tagIdSubject = new ReplaySubject<string[]>(1);
+  const tagDefSubject = new ReplaySubject<MapWithChanges<string, TagDef>>(1);
+  const tagValueHistorySubject = new ReplaySubject<
+    MapWithChanges<string, TagState[]>
+  >(1);
 
-  const tagReplay$ = tag$.pipe(shareReplay(1))
-  const historyReplay$ = action$.pipe(
-    scan((history, action) => [...history, action], [] as Action[]),
-    shareReplay(1),
-  )
+  const makeState = () => {
+    const state = createState({
+      newTag$,
+      tagSubscription$,
+      tagUnsubscription$,
+      tagValueChange$,
+      tagRefDetection$,
+    });
 
-  const subscription = tagReplay$.subscribe()
-  subscription.add(historyReplay$.subscribe())
+    const { tagId$, tagDefById$, tagValueHistoryById$ } = state;
+    const tagDef$ = combineKeys(tagId$, tagDefById$);
+    const tagValueHistory$ = combineKeys(tagId$, tagValueHistoryById$);
+
+    const subscription = tagId$.subscribe(tagIdSubject);
+    // We need to also subscribe to these because the underlying partitionByKey needs to be alive
+    subscription.add(tagDef$.subscribe(tagDefSubject));
+    subscription.add(tagValueHistory$.subscribe(tagValueHistorySubject));
+    return () => subscription.unsubscribe();
+  };
+
+  let disposeState = makeState();
+  const reset = () => {
+    disposeState();
+    disposeState = makeState();
+  };
 
   return {
-    reset$,
     newTag$,
     tagSubscription$,
     tagUnsubscription$,
     tagValueChange$,
     tagRefDetection$,
-    tag$: tagReplay$,
-    action$,
-    actionHistory$: historyReplay$,
-    dispose: () => subscription.unsubscribe(),
-  }
-}
+    tagId$: tagIdSubject,
+    tagDef$: tagDefSubject,
+    tagValueHistory$: tagValueHistorySubject,
+    reset,
+    dispose: () => {
+      disposeState();
+    },
+  };
+};
