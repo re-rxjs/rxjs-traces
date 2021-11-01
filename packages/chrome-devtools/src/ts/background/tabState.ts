@@ -1,6 +1,6 @@
-import { Subject } from "rxjs";
-import { createState } from "rxjs-traces-devtools";
-import { combineKeys } from "@react-rxjs/utils";
+import { ReplaySubject, Subject } from "rxjs";
+import { createState, TagDef, TagState } from "rxjs-traces-devtools";
+import { combineKeys, MapWithChanges } from "@react-rxjs/utils";
 
 export const createTabState = () => {
   const newTag$ = new Subject<{
@@ -31,22 +31,37 @@ export const createTabState = () => {
     ref: string;
   }>();
 
-  const state = createState({
-    newTag$,
-    tagSubscription$,
-    tagUnsubscription$,
-    tagValueChange$,
-    tagRefDetection$,
-  });
+  const tagIdSubject = new ReplaySubject<string[]>(1);
+  const tagDefSubject = new ReplaySubject<MapWithChanges<string, TagDef>>(1);
+  const tagValueHistorySubject = new ReplaySubject<
+    MapWithChanges<string, TagState[]>
+  >(1);
 
-  const { tagId$, tagDefById$, tagValueHistoryById$ } = state;
-  const tagDef$ = combineKeys(tagId$, tagDefById$);
-  const tagValueHistory$ = combineKeys(tagId$, tagValueHistoryById$);
+  const makeState = () => {
+    const state = createState({
+      newTag$,
+      tagSubscription$,
+      tagUnsubscription$,
+      tagValueChange$,
+      tagRefDetection$,
+    });
 
-  const subscription = tagId$.subscribe();
-  // We need to also subscribe to these because the underlying partitionByKey needs to be alive
-  subscription.add(tagDef$.subscribe());
-  subscription.add(tagValueHistory$.subscribe());
+    const { tagId$, tagDefById$, tagValueHistoryById$ } = state;
+    const tagDef$ = combineKeys(tagId$, tagDefById$);
+    const tagValueHistory$ = combineKeys(tagId$, tagValueHistoryById$);
+
+    const subscription = tagId$.subscribe(tagIdSubject);
+    // We need to also subscribe to these because the underlying partitionByKey needs to be alive
+    subscription.add(tagDef$.subscribe(tagDefSubject));
+    subscription.add(tagValueHistory$.subscribe(tagValueHistorySubject));
+    return () => subscription.unsubscribe();
+  };
+
+  let disposeState = makeState();
+  const reset = () => {
+    disposeState();
+    disposeState = makeState();
+  };
 
   return {
     newTag$,
@@ -54,9 +69,12 @@ export const createTabState = () => {
     tagUnsubscription$,
     tagValueChange$,
     tagRefDetection$,
-    tagId$,
-    tagDef$,
-    tagValueHistory$,
-    dispose: () => subscription.unsubscribe(),
+    tagId$: tagIdSubject,
+    tagDef$: tagDefSubject,
+    tagValueHistory$: tagValueHistorySubject,
+    reset,
+    dispose: () => {
+      disposeState();
+    },
   };
 };

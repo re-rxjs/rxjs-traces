@@ -15,6 +15,9 @@ chrome.runtime.onMessage.addListener(function (message, sender) {
     tabStates[sender.tab.id] = createTabState();
   }
   switch (message.type) {
+    case "reset":
+      tabStates[sender.tab.id].reset();
+      break;
     case "newTag$":
       return tabStates[sender.tab.id].newTag$.next(message.payload);
     case "tagSubscription$":
@@ -38,30 +41,48 @@ chrome.runtime.onConnect.addListener(function (devToolsConnection) {
     tabStates[toolsTabId] = createTabState();
   }
 
-  const tagsSub = tabStates[toolsTabId].tagId$.subscribe((value) => {
-    devToolsConnection.postMessage({
-      tagId$: value,
-    });
-  });
-  const tagDefSub = tabStates[toolsTabId].tagDef$.subscribe((value) => {
-    devToolsConnection.postMessage({
-      tagDef$: Object.fromEntries(
-        Array.from(value.changes).map((key) => [key, value.get(key)])
-      ),
-    });
-  });
-  const tagValueHistorySub = tabStates[toolsTabId].tagValueHistory$.subscribe(
-    (value) => {
-      devToolsConnection.postMessage({
-        tagValueHistory$: Object.fromEntries(
-          Array.from(value.changes).map((key) => [key, value.get(key)])
-        ),
-      });
-    }
-  );
+  let cleanup = () => {};
 
   devToolsConnection.onMessage.addListener((message) => {
-    if (typeof message === "object" && message.type === "copy") {
+    if (typeof message !== "object") {
+      return;
+    }
+    if (message.type === "ready") {
+      let firstRun = true;
+
+      const tagsSub = tabStates[toolsTabId].tagId$.subscribe((value) => {
+        devToolsConnection.postMessage({
+          tagId$: value,
+        });
+      });
+      const tagDefSub = tabStates[toolsTabId].tagDef$.subscribe((value) => {
+        const keysToEval = Array.from(firstRun ? value.keys() : value.changes);
+        devToolsConnection.postMessage({
+          tagDef$: Object.fromEntries(
+            keysToEval.map((key) => [key, value.get(key)])
+          ),
+        });
+      });
+      const tagValueHistorySub = tabStates[
+        toolsTabId
+      ].tagValueHistory$.subscribe((value) => {
+        const keysToEval = Array.from(firstRun ? value.keys() : value.changes);
+        devToolsConnection.postMessage({
+          tagValueHistory$: Object.fromEntries(
+            keysToEval.map((key) => [key, value.get(key)])
+          ),
+        });
+      });
+
+      firstRun = false;
+
+      cleanup = () => {
+        tagsSub.unsubscribe();
+        tagDefSub.unsubscribe();
+        tagValueHistorySub.unsubscribe();
+      };
+    }
+    if (message.type === "copy") {
       document.addEventListener(
         "copy",
         (e) => {
@@ -79,8 +100,6 @@ chrome.runtime.onConnect.addListener(function (devToolsConnection) {
   });
 
   devToolsConnection.onDisconnect.addListener(function () {
-    tagsSub.unsubscribe();
-    tagDefSub.unsubscribe();
-    tagValueHistorySub.unsubscribe();
+    cleanup();
   });
 });
