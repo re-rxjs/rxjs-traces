@@ -8,7 +8,7 @@
     "dev": "cross-env NODE_ENV=development webpack -d",
     "build": "cross-env NODE_ENV=production webpack -p",
     "clean": "rm -rf ./dist",
-    "lint": "tsdx lint src",
+    "lint": "eslint src/**/*.{js,jsx,ts,tsx}",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md}\""
   },
   "license": "MIT",

@@ -13,7 +13,7 @@
     "start": "tsdx watch",
     "build": "tsdx build",
     "test": "tsdx test",
-    "lint": "tsdx lint src test",
+    "lint": "eslint src/**/*.{js,jsx,ts,tsx}",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md}\" \"test/**/*.{js,jsx,ts,tsx,json,md}\"",
     "prepare": "tsdx build"
   },

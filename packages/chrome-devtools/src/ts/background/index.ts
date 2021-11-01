@@ -38,25 +38,26 @@ chrome.runtime.onConnect.addListener(function (devToolsConnection) {
     tabStates[toolsTabId] = createTabState();
   }
 
-  const tagsSub = tabStates[toolsTabId].tagId$.subscribe((value) =>
+  const tagsSub = tabStates[toolsTabId].tagId$.subscribe((value) => {
     devToolsConnection.postMessage({
       tagId$: value,
-    })
-  );
-  const tagDefSub = tabStates[toolsTabId].tagDef$.subscribe((value) =>
+    });
+  });
+  const tagDefSub = tabStates[toolsTabId].tagDef$.subscribe((value) => {
     devToolsConnection.postMessage({
       tagDef$: Object.fromEntries(
         Array.from(value.changes).map((key) => [key, value.get(key)])
       ),
-    })
-  );
+    });
+  });
   const tagValueHistorySub = tabStates[toolsTabId].tagValueHistory$.subscribe(
-    (value) =>
+    (value) => {
       devToolsConnection.postMessage({
         tagValueHistory$: Object.fromEntries(
           Array.from(value.changes).map((key) => [key, value.get(key)])
         ),
-      })
+      });
+    }
   );
 
   devToolsConnection.onMessage.addListener((message) => {

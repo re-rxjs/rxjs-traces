@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "node ../../buildPackage.mjs devtools --css",
-    "lint": "eslint src/**/*",
+    "lint": "eslint src/**/*.{js,jsx,ts,tsx}",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md}\""
   },
   "peerDependencies": {

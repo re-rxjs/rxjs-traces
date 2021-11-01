@@ -26,7 +26,12 @@ const handleMessage = (event: MessageEvent) => {
       requestMessages();
     } else if (!historyReceived && data.type === "event-history") {
       historyReceived = true;
-      data.payload.forEach((evt: any) => chrome.runtime.sendMessage(evt));
+      data.payload.forEach((evt: any) =>
+        chrome.runtime.sendMessage({
+          source: "rxjs-traces",
+          ...evt,
+        })
+      );
     } else {
       if (historyReceived) {
         chrome.runtime.sendMessage(data);
